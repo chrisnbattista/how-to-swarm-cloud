@@ -19,6 +19,8 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
             'b_1':      [],
             'b_2':      [],
             'm':        [],
+            'v_1':      [],
+            'v_2':      [],
             't':        []
         }
     )
@@ -35,8 +37,8 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
         while smallest_interparticle_distance < 1:
             theta = random.random() * 2 * math.pi
             r = random.random() * radius
-            candidate_b_1 = r * math.cos(theta)
-            candidate_b_2 = r * math.sin(theta)
+            candidate_b_1 = r * math.cos(theta) + radius
+            candidate_b_2 = r * math.sin(theta) + radius
             test_df = world_state[['b_1', 'b_2']] - [candidate_b_1, candidate_b_2]
             norms = test_df.apply(np.linalg.norm, axis=1)
             ##print(norms)
@@ -49,6 +51,8 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
                 'b_1':      candidate_b_1,
                 'b_2':      candidate_b_2,
                 'm':        10,
+                'v_1':      0,
+                'v_2':      0,
                 't':        0
             },
             ignore_index=True
