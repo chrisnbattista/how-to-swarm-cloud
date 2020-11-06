@@ -29,13 +29,25 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
 
     # create a random distribution of particles
     for i in range(n_particles):
-        theta = random.random() * 2 * math.pi
-        r = random.random() * radius
+
+        smallest_interparticle_distance = 0
+
+        while smallest_interparticle_distance < 1:
+            theta = random.random() * 2 * math.pi
+            r = random.random() * radius
+            candidate_b_1 = r * math.cos(theta)
+            candidate_b_2 = r * math.sin(theta)
+            test_df = world_state[['b_1', 'b_2']] - [candidate_b_1, candidate_b_2]
+            norms = test_df.apply(np.linalg.norm, axis=1)
+            ##print(norms)
+            smallest_interparticle_distance = norms.min()
+            ##print(norms.min())
+
         world_state = world_state.append(
             {
                 'id':       i,
-                'b_1':      r * math.cos(theta),
-                'b_2':      r * math.sin(theta),
+                'b_1':      candidate_b_1,
+                'b_2':      candidate_b_2,
                 'm':        10,
                 't':        0
             },
