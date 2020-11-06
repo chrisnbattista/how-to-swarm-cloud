@@ -21,7 +21,7 @@ def integrate_rect_world(world, force_matrix, timestep):
     displacement_matrix[['b_1', 'b_2']] = displacement_matrix[['b_1', 'b_2']].div(displacement_matrix['m'], axis=0)
     displacement_matrix.drop(columns=['m'], inplace=True)
 
-    print(world)
-    print(displacement_matrix)
+    ##print(world)
+    ##print(displacement_matrix)
 
     return (world + displacement_matrix).fillna(world)
