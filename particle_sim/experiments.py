@@ -15,10 +15,11 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
     # Set state machine standard vars
     world_state = pd.DataFrame(
         {
-            'id':   [],
-            'b_1':    [],
-            'b_2':    [],
-            't':    []
+            'id':       [],
+            'b_1':      [],
+            'b_2':      [],
+            'm':        [],
+            't':        []
         }
     )
 
@@ -35,6 +36,7 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
                 'id':       i,
                 'b_1':      r * math.cos(theta),
                 'b_2':      r * math.sin(theta),
+                'm':        10,
                 't':        0
             },
             ignore_index=True
@@ -61,6 +63,8 @@ def advance_timestep(world, timestep, integrator, pairwise_forces=[]):
 
     for force in pairwise_forces:
         force_matrix += force(world)
+    
+    ##print(force_matrix)
     
     ## Advance the timestep itself
     world['t'] += timestep
