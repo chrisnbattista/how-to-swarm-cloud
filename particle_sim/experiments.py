@@ -62,7 +62,7 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
 
     return world_state.set_index('id')
 
-def advance_timestep(world, timestep, integrator, pairwise_forces=[]):
+def advance_timestep(world, timestep, integrator, forces=[]):
     '''
         world:              state machine dataframe containing all particles [pd.Dataframe]
         timestep:           length of time to integrate over [s]
@@ -77,7 +77,7 @@ def advance_timestep(world, timestep, integrator, pairwise_forces=[]):
                         )
     force_matrix[['b_1', 'b_2']] = np.zeros( (len(world.index), 2) )
 
-    for force in pairwise_forces:
+    for force in forces:
         force_matrix += force(world)
     
     ##print(force_matrix)

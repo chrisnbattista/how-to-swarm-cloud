@@ -49,7 +49,10 @@ def run_sim():
                 world,
                 0.1,
                 integrators.integrate_rect_world,
-                [lambda x: potentials.pairwise_world_lennard_jones_potential(x, 5, 1)]
+                [
+                    lambda x: potentials.pairwise_world_lennard_jones_potential(x, 5, 1)
+                    # add damping force
+                ]
             )
             
             # BCs (periodic square)
