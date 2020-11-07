@@ -16,6 +16,7 @@ def integrate_rect_world(world, force_matrix, timestep):
     '''
     '''
 
+    # Velocity from force
     velocity_matrix = integrate_rect(timestep, force_matrix)
     world['v_1'] += velocity_matrix['b_1']
     world['v_2'] += velocity_matrix['b_2']
