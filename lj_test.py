@@ -13,7 +13,9 @@ sns.set_theme()
 def run_sim():
 
     ## ICs
-    world = experiments.set_up_experiment(radius=5, n_particles=15)
+    world = experiments.set_up_experiment(
+        radius=5,
+        n_particles=25)
     long_world_history = world.reset_index()
 
     ## Sim loop
