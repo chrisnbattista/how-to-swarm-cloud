@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import random, math
 
-def set_up_experiment(n_particles, radius, particle_props=[]):
+def set_up_experiment(n_particles, radius, center=(0,0), particle_props=[]):
     '''
         n_particles:    initial number of particles []
         radius:         initial radius of particle distribution [m]
@@ -37,8 +37,8 @@ def set_up_experiment(n_particles, radius, particle_props=[]):
         while smallest_interparticle_distance < 1:
             theta = random.random() * 2 * math.pi
             r = random.random() * radius
-            candidate_b_1 = r * math.cos(theta) + radius
-            candidate_b_2 = r * math.sin(theta) + radius
+            candidate_b_1 = center[0] + r * math.cos(theta) + radius
+            candidate_b_2 = center[1] + r * math.sin(theta) + radius
             test_df = world_state[['b_1', 'b_2']] - [candidate_b_1, candidate_b_2]
             norms = test_df.apply(np.linalg.norm, axis=1)
             ##print(norms)
@@ -79,8 +79,6 @@ def advance_timestep(world, timestep, integrator, forces=[]):
 
     for force in forces:
         force_matrix += force(world)
-    
-    ##print(force_matrix)
     
     ## Advance the timestep itself
     world['t'] += timestep

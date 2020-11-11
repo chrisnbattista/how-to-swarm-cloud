@@ -12,9 +12,14 @@ sns.set_theme()
 
 def run_sim():
 
+    ## Parameters
+    timestep = 0.01
+    size = 100
+
     ## ICs
     world = experiments.set_up_experiment(
-        radius=5,
+        radius=10,
+        center=(size/2, size/2),
         n_particles=25)
     long_world_history = world.reset_index()
 
@@ -23,7 +28,7 @@ def run_sim():
         for i in range(100000):
 
             # Data viz
-            if i % 10 == 0:
+            if i % 100 == 0:
                 plt.clf()
                 p = sns.scatterplot(
                     x='b_1',
@@ -49,17 +54,17 @@ def run_sim():
             # Sim step
             world = experiments.advance_timestep(
                 world,
-                0.1,
+                timestep,
                 integrators.integrate_rect_world,
                 [
-                    lambda x: potentials.pairwise_world_lennard_jones_potential(x, 5, 1)
-                    # add damping force
+                    lambda x: forces.pairwise_world_lennard_jones_potential(x, 1, 1),
+                    lambda x: forces.viscous_damping_force(x, 0.005)
                 ]
             )
             
             # BCs (periodic square)
-            world['b_1'] = world['b_1'] % 10
-            world['b_2'] = world['b_2'] % 10
+            world['b_1'] = world['b_1'] % size
+            world['b_2'] = world['b_2'] % size
 
     except KeyboardInterrupt:
         pass
