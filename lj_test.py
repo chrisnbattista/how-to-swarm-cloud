@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import pandas as pd
 import datetime as dt
-import time
+import time, math
 
 def setup_plots():
     plt.ion()
@@ -31,7 +31,10 @@ def lj_desktop_data_viz(world, long_world_history, i):
         )
         p2.legend_.remove()
         plt.title(f"LJ Sim Timestep {i}")
-        plt.pause(0.00001)
+        ##plt.pause(0.00001)
+        fig = plt.gcf()
+        fig.canvas.draw_idle()
+        fig.canvas.start_event_loop(0.01)
 
 def run_sim(data_viz=lj_desktop_data_viz):
 
@@ -42,17 +45,21 @@ def run_sim(data_viz=lj_desktop_data_viz):
     ## Parameters
     timestep = 0.01
     size = 100
+    n_particles = 1000
+
+    epsilon = 100
+    omega = 1
 
     ## ICs
     world = experiments.set_up_experiment(
-        radius=10,
+        radius=size/2,
         center=(size/2, size/2),
-        n_particles=25)
+        n_particles=n_particles)
     long_world_history = world.reset_index()
 
     ## Sim loop
     try:
-        for i in range(100000):
+        for i in range(10000):
 
             ## Record keeping
             loop_duration = time.time() - last_loop_time
@@ -71,14 +78,14 @@ def run_sim(data_viz=lj_desktop_data_viz):
                 timestep,
                 integrators.integrate_rect_world,
                 [
-                    lambda x: forces.pairwise_world_lennard_jones_potential(x, epsilon=1, omega=1),
+                    lambda x: forces.pairwise_world_lennard_jones_potential(x, epsilon=epsilon, omega=omega),
                     lambda x: forces.viscous_damping_force(x, 0.005)
                 ]
             )
             
             ## BCs (periodic square)
-            world['b_1'] = world['b_1'] % size
-            world['b_2'] = world['b_2'] % size
+            ##world['b_1'] = world['b_1'] % size
+            ##world['b_2'] = world['b_2'] % size
 
     except KeyboardInterrupt:
         pass
