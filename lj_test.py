@@ -34,7 +34,7 @@ def lj_desktop_data_viz(world, long_world_history, i):
         ##plt.pause(0.00001)
         fig = plt.gcf()
         fig.canvas.draw_idle()
-        fig.canvas.start_event_loop(0.01)
+        fig.canvas.start_event_loop(0.0001)
 
 def run_sim(data_viz=lj_desktop_data_viz):
 
@@ -45,9 +45,9 @@ def run_sim(data_viz=lj_desktop_data_viz):
     ## Parameters
     timestep = 0.01
     size = 100
-    n_particles = 1000
+    n_particles = 100
 
-    epsilon = 100
+    epsilon = 1
     omega = 1
 
     ## ICs
@@ -91,7 +91,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
         pass
 
     # Save data
-    long_world_history.to_csv("LJ Sim Run_" + str(dt.datetime.now()) + ".csv")
+    long_world_history.to_csv("./data/LJ Sim Run_" + str(dt.datetime.now()) + ".csv")
 
 if __name__ == '__main__':
     setup_plots()
