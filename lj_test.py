@@ -91,7 +91,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
         pass
 
     # Save data
-    long_world_history.to_csv("LJ Sim Run_" + str(dt.datetime.now()) + ".csv")
+    long_world_history.to_csv("./data/LJ Sim Run_" + str(dt.datetime.now()) + ".csv")
 
 if __name__ == '__main__':
     setup_plots()
