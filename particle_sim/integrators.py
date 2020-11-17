@@ -17,11 +17,12 @@ def integrate_rect_world(world, force_matrix, timestep):
     '''
 
     # Velocity from force
-    velocity_matrix = integrate_rect(timestep, force_matrix)
+    # F = ma = m * derivative(v)
+    # v = integral(F) / m
+    velocity_matrix = integrate_rect(timestep, force_matrix)  / 10 # MUST FIX - constant mass
     world[:, 4:6] += velocity_matrix
 
     # Displacement from velocity
-    world[:, 1:3] += integrate_rect(timestep, world[:, 4:6]) / 10
-    # MUST FIX - remove constant mass
+    world[:, 1:3] += integrate_rect(timestep, world[:, 4:6])
 
     return world

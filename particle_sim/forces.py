@@ -49,31 +49,24 @@ def pairwise_world_lennard_jones_potential(world, epsilon, omega):
     ##print(answer)
     return answer
 
-def slow_pairwise_world_lennard_jones_potential(world, epsilon, omega):
-    '''
-    '''
-
-    potential_matrix = np.zeros( (world.shape[0], 2) )
-    for i in range(world.shape[0]):
-        for j in range(world.shape[0]):
-            if i == j: continue
-            norm = np.linalg.norm(world.iloc[j][['b_1', 'b_2']] - world.iloc[i][['b_1', 'b_2']])
-            magnitude = lennard_jones_potential(epsilon, omega, norm)
-            direction = ((world.iloc[j] - world.iloc[i])/norm)[['b_1', 'b_2']]
-            potential_matrix[j] += direction * magnitude
-
-    return potential_matrix
+# def slow_pairwise_world_lennard_jones_potential(world, epsilon, omega):
+#     '''
+#     '''
+#
+#     potential_matrix = np.zeros( (world.shape[0], 2) )
+#     for i in range(world.shape[0]):
+#         for j in range(world.shape[0]):
+#             if i == j: continue
+#             norm = np.linalg.norm(world.iloc[j][['b_1', 'b_2']] - world.iloc[i][['b_1', 'b_2']])
+#             magnitude = lennard_jones_potential(epsilon, omega, norm)
+#             direction = ((world.iloc[j] - world.iloc[i])/norm)[['b_1', 'b_2']]
+#             potential_matrix[j] += direction * magnitude
+#
+#     return potential_matrix
 
 def viscous_damping_force(world, c):
     '''
     F_damping = -cv
     '''
 
-    forces = -c * \
-        (
-            #np.multiply(
-                world[:, 1:3]
-            #    np.abs(world[['v_1', 'v_2']])
-            #)
-        )
-    return forces
+    return -c * world[:, 4:6]

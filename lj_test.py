@@ -42,7 +42,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
 
     ## Parameters
     timestep = 0.01
-    size = 25
+    size = 35
     n_particles = 10
     n_steps = 100000
 
@@ -85,6 +85,8 @@ def run_sim(data_viz=lj_desktop_data_viz):
             ## BCs (periodic square)
             ##world['b_1'] = world['b_1'] % size
             ##world['b_2'] = world['b_2'] % size
+
+            print(world)
 
     except KeyboardInterrupt:
         pass

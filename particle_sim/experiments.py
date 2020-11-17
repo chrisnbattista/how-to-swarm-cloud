@@ -1,7 +1,7 @@
 import numpy as np
 import random, math
 
-def set_up_experiment(n_particles, radius, center=(0,0), particle_props=[]):
+def set_up_experiment(n_particles, radius, center=(0,0), min_dist=2):
     '''
         n_particles:    initial number of particles []
         radius:         initial radius of particle distribution [m]
@@ -21,11 +21,11 @@ def set_up_experiment(n_particles, radius, center=(0,0), particle_props=[]):
 
         smallest_interparticle_distance = 0
 
-        while smallest_interparticle_distance < 1:
+        while smallest_interparticle_distance < min_dist:
             theta = random.random() * 2 * math.pi
             r = random.random() * radius
-            candidate_b_1 = center[0] + r * math.cos(theta) + radius
-            candidate_b_2 = center[1] + r * math.sin(theta) + radius
+            candidate_b_1 = center[0] + r * math.cos(theta)
+            candidate_b_2 = center[1] + r * math.sin(theta)
             test_df = world_state[:i, 1:3] - [candidate_b_1, candidate_b_2]
             norms = np.linalg.norm( test_df[:i, 1:3], axis=1 )
             ##print(norms)
@@ -55,7 +55,7 @@ def advance_timestep(world, timestep, integrator, forces=[]):
         force_matrix += force(world)
 
     ## Advance the timestep itself
-    world[6] += timestep
+    world[:,6] += timestep
 
     ## Integrate forces over timestep
     return integrator(world, force_matrix, timestep)
