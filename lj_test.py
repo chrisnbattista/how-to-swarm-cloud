@@ -12,7 +12,7 @@ def setup_plots():
     plt.show()
     sns.set_theme()
 
-def lj_desktop_data_viz(world, long_world_history, i):
+def lj_desktop_data_viz(world, long_world_history, i, label=''):
     if i % 100 == 0:
         plt.clf()
         # p = sns.scatterplot(
@@ -22,13 +22,12 @@ def lj_desktop_data_viz(world, long_world_history, i):
         #     hue='t',
         #     data=long_world_history
         # )
-        # p.legend_.remove()
         p2 = sns.scatterplot(
             x=world[:,1],
             y=world[:,2],
             color='k'
         )
-        plt.title(f"LJ Sim Timestep {i}")
+        plt.title(label)
         ##plt.pause(0.00001)
         fig = plt.gcf()
         fig.canvas.draw_idle()
@@ -42,11 +41,11 @@ def run_sim(data_viz=lj_desktop_data_viz):
 
     ## Parameters
     timestep = 0.01
-    size = 35
-    n_particles = 10
+    size = 350
+    n_particles = 100
     n_steps = 100000
 
-    epsilon = 100
+    epsilon = 1000
     omega = 1
 
     ## ICs
@@ -63,10 +62,9 @@ def run_sim(data_viz=lj_desktop_data_viz):
             ## Record keeping
             loop_duration = time.time() - last_loop_time
             last_loop_time += loop_duration
-            if i % 100 == 0: print(loop_duration)
 
             ## Data viz
-            data_viz(world, long_world_history, i)
+            data_viz(world, long_world_history, i, label=f"LJ Sim Timestep {i} - loop time {loop_duration}")
 
             ## Trajectory recording
             long_world_history[ i*n_particles : (i+1)*n_particles, : ] = world
@@ -85,8 +83,6 @@ def run_sim(data_viz=lj_desktop_data_viz):
             ## BCs (periodic square)
             ##world['b_1'] = world['b_1'] % size
             ##world['b_2'] = world['b_2'] % size
-
-            print(world)
 
     except KeyboardInterrupt:
         pass
