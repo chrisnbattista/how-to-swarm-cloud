@@ -1,3 +1,5 @@
 env/**
+pypy-env/**
 **/__pycache__/**
 data/**
+

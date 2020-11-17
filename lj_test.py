@@ -3,7 +3,7 @@ from particle_sim import *
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-import pandas as pd
+import numpy as np
 import datetime as dt
 import time, math
 
@@ -15,21 +15,19 @@ def setup_plots():
 def lj_desktop_data_viz(world, long_world_history, i):
     if i % 100 == 0:
         plt.clf()
-        p = sns.scatterplot(
-            x='b_1',
-            y='b_2',
-            s=5,
-            hue='t',
-            data=long_world_history
-        )
-        p.legend_.remove()
+        # p = sns.scatterplot(
+        #     x='b_1',
+        #     y='b_2',
+        #     s=5,
+        #     hue='t',
+        #     data=long_world_history
+        # )
+        # p.legend_.remove()
         p2 = sns.scatterplot(
-            x='b_1',
-            y='b_2',
-            color='k',
-            data=world
+            x=world[:,1],
+            y=world[:,2],
+            color='k'
         )
-        p2.legend_.remove()
         plt.title(f"LJ Sim Timestep {i}")
         ##plt.pause(0.00001)
         fig = plt.gcf()
@@ -44,8 +42,9 @@ def run_sim(data_viz=lj_desktop_data_viz):
 
     ## Parameters
     timestep = 0.01
-    size = 100
+    size = 10000
     n_particles = 1000
+    n_steps = 100000
 
     epsilon = 100
     omega = 1
@@ -55,22 +54,22 @@ def run_sim(data_viz=lj_desktop_data_viz):
         radius=size/2,
         center=(size/2, size/2),
         n_particles=n_particles)
-    long_world_history = world.reset_index()
+    long_world_history = np.empty( (n_steps * n_particles, 7) )
 
     ## Sim loop
     try:
-        for i in range(10000):
+        for i in range(n_steps):
 
             ## Record keeping
             loop_duration = time.time() - last_loop_time
             last_loop_time += loop_duration
-            print(loop_duration)
+            if i % 1000 == 0: print(loop_duration)
 
             ## Data viz
             data_viz(world, long_world_history, i)
-            
+
             ## Trajectory recording
-            long_world_history = pd.concat([long_world_history, world.reset_index()], axis=0, ignore_index=True)
+            long_world_history[ i*n_particles : (i+1)*n_particles, : ] = world
 
             ## Sim step
             world = experiments.advance_timestep(
@@ -82,7 +81,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
                     lambda x: forces.viscous_damping_force(x, 0.005)
                 ]
             )
-            
+
             ## BCs (periodic square)
             ##world['b_1'] = world['b_1'] % size
             ##world['b_2'] = world['b_2'] % size
@@ -91,7 +90,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
         pass
 
     # Save data
-    long_world_history.to_csv("./data/LJ Sim Run_" + str(dt.datetime.now()) + ".csv")
+    np.savetxt("./data/LJ Sim Run_" + str(dt.datetime.now()) + ".csv", long_world_history, delimiter=",")
 
 if __name__ == '__main__':
     setup_plots()

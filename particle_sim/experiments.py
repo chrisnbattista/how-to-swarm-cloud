@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import random, math
 
@@ -13,54 +12,32 @@ def set_up_experiment(n_particles, radius, center=(0,0), particle_props=[]):
     # b_1 ... b_n are position expressed in basis vectors
 
     # Set state machine standard vars
-    world_state = pd.DataFrame(
-        {
-            'id':       [],
-            'b_1':      [],
-            'b_2':      [],
-            'm':        [],
-            'v_1':      [],
-            'v_2':      [],
-            't':        []
-        }
-    )
-
-    # set additiona vars
-    for prop in particle_props:
-        world_state[prop] = []
+    # id, b_1, b_2, m, v_1, v_2, t
+    #  0   1    2   3   4    5   6
+    world_state = np.empty ( (n_particles, 7) )
 
     # create a random distribution of particles
     for i in range(n_particles):
 
         smallest_interparticle_distance = 0
 
-        while smallest_interparticle_distance < 1:
+        while smallest_interparticle_distance < 0.1:
             theta = random.random() * 2 * math.pi
             r = random.random() * radius
             candidate_b_1 = center[0] + r * math.cos(theta) + radius
             candidate_b_2 = center[1] + r * math.sin(theta) + radius
-            test_df = world_state[['b_1', 'b_2']] - [candidate_b_1, candidate_b_2]
-            norms = test_df.apply(np.linalg.norm, axis=1)
+            test_df = world_state[:i, 1:3] - [candidate_b_1, candidate_b_2]
+            norms = np.linalg.norm( test_df[:i, 1:3], axis=1 )
             ##print(norms)
-            smallest_interparticle_distance = norms.min()
+            if i > 0:
+                smallest_interparticle_distance = norms.min()
+            else:
+                break
             ##print(norms.min())
 
-        world_state = world_state.append(
-            {
-                'id':       i,
-                'b_1':      candidate_b_1,
-                'b_2':      candidate_b_2,
-                'm':        10,
-                'v_1':      0,
-                'v_2':      0,
-                't':        0
-            },
-            ignore_index=True
-        )
-    
-    world_state['id'] = world_state['id'].astype(int)
+        world_state[i, :] = (i, candidate_b_1, candidate_b_2, 10, 0, 0, 0)
 
-    return world_state.set_index('id')
+    return world_state
 
 def advance_timestep(world, timestep, integrator, forces=[]):
     '''
@@ -72,16 +49,13 @@ def advance_timestep(world, timestep, integrator, forces=[]):
     ## Calculate forces
 
     # Initialize matrix to hold forces keyed to id
-    force_matrix = pd.DataFrame(
-                        index=world.index
-                        )
-    force_matrix[['b_1', 'b_2']] = np.zeros( (len(world.index), 2) )
+    force_matrix = np.zeros ( (world.shape[0], 2) )
 
     for force in forces:
         force_matrix += force(world)
-    
+
     ## Advance the timestep itself
-    world['t'] += timestep
-    
+    world[6] += timestep
+
     ## Integrate forces over timestep
     return integrator(world, force_matrix, timestep)
