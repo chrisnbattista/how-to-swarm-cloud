@@ -21,7 +21,7 @@ def set_up_experiment(n_particles, radius, center=(0,0), particle_props=[]):
 
         smallest_interparticle_distance = 0
 
-        while smallest_interparticle_distance < 0.1:
+        while smallest_interparticle_distance < 1:
             theta = random.random() * 2 * math.pi
             r = random.random() * radius
             candidate_b_1 = center[0] + r * math.cos(theta) + radius

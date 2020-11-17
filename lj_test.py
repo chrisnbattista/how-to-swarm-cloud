@@ -42,8 +42,8 @@ def run_sim(data_viz=lj_desktop_data_viz):
 
     ## Parameters
     timestep = 0.01
-    size = 10000
-    n_particles = 1000
+    size = 25
+    n_particles = 10
     n_steps = 100000
 
     epsilon = 100
@@ -63,7 +63,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
             ## Record keeping
             loop_duration = time.time() - last_loop_time
             last_loop_time += loop_duration
-            if i % 1000 == 0: print(loop_duration)
+            if i % 100 == 0: print(loop_duration)
 
             ## Data viz
             data_viz(world, long_world_history, i)
@@ -78,7 +78,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
                 integrators.integrate_rect_world,
                 [
                     lambda x: forces.pairwise_world_lennard_jones_potential(x, epsilon=epsilon, omega=omega),
-                    lambda x: forces.viscous_damping_force(x, 0.005)
+                    lambda x: forces.viscous_damping_force(x, 0.05)
                 ]
             )
 
