@@ -8,4 +8,4 @@ if sys.argv[-1] != 'skip':
 
 import pstats
 p = pstats.Stats('profile.tmp')
-p.sort_stats('cumulative').print_stats(25)
+p.sort_stats('cumulative').print_stats(50)

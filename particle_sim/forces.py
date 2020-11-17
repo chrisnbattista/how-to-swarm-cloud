@@ -1,9 +1,10 @@
 import numpy as np
 import scipy
+import numexpr as ne
 from sklearn.preprocessing import normalize
 
 def lennard_jones_potential(epsilon, omega, r):
-    return (4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6
+    return ne.evaluate('(4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6')
 
 def pairwise_world_lennard_jones_potential(world, epsilon, omega):
     '''
@@ -13,21 +14,16 @@ def pairwise_world_lennard_jones_potential(world, epsilon, omega):
     # isolate particle position data
     coords = world[:,1:3]
 
-    # calculate pairwise potentials
-    potentials = np.nan_to_num(
-        scipy.spatial.distance.squareform(
-            lennard_jones_potential(
-                epsilon,
-                omega,
-                scipy.spatial.distance.pdist(coords)
-            )
-        )
+    # calculate pairwise potentials and distances
+    p_dists = scipy.spatial.distance.pdist(coords)
+    potentials = scipy.spatial.distance.squareform(
+            lennard_jones_potential(epsilon, omega, p_dists) / p_dists
     )
 
     # get absolute pairwise displacements
-    size = coords.shape[0]
+    ##size = coords.shape[0]
     differences = (coords[:, np.newaxis] - coords)
-    differences = normalize(differences.reshape(-1, 2)).reshape(size, size, 2)
+    ##differences = normalize(differences.reshape(-1, 2)).reshape(size, size, 2)
 
     # slow draft code
     # # normalize displacements using L2-norm
@@ -45,9 +41,8 @@ def pairwise_world_lennard_jones_potential(world, epsilon, omega):
     # )
 
     # scale displacements by potentials
-    answer = np.sum(differences * potentials[:, :, np.newaxis], axis=1)
-    ##print(answer)
-    return answer
+    expanded_potentials = potentials[:, :, np.newaxis]
+    return ne.evaluate('sum(differences * expanded_potentials, axis=1)')
 
 # def slow_pairwise_world_lennard_jones_potential(world, epsilon, omega):
 #     '''

@@ -45,8 +45,9 @@ def run_sim(data_viz=lj_desktop_data_viz):
     n_particles = 100
     n_steps = 100000
 
-    epsilon = 1000
-    omega = 1
+    epsilon = 100
+    omega = 3
+    c = 0.03
 
     ## ICs
     world = experiments.set_up_experiment(
@@ -76,7 +77,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
                 integrators.integrate_rect_world,
                 [
                     lambda x: forces.pairwise_world_lennard_jones_potential(x, epsilon=epsilon, omega=omega),
-                    lambda x: forces.viscous_damping_force(x, 0.05)
+                    lambda x: forces.viscous_damping_force(x, c)
                 ]
             )
 
