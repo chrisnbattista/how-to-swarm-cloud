@@ -39,7 +39,7 @@ def set_up_experiment(n_particles, radius, center=(0,0), min_dist=2):
 
     return world_state
 
-def advance_timestep(world, timestep, integrator, forces=[]):
+def advance_timestep(world, timestep, integrator, forces=[], indicators={}):
     '''
         world:              state machine dataframe containing all particles [pd.Dataframe]
         timestep:           length of time to integrate over [s]
@@ -58,4 +58,11 @@ def advance_timestep(world, timestep, integrator, forces=[]):
     world[:,6] += timestep
 
     ## Integrate forces over timestep
-    return integrator(world, force_matrix, timestep)
+    integrator(world, force_matrix, timestep)
+
+    ## Compute indicators
+    indicator_results = {}
+    for indicator_name in indicators.keys():
+        indicator_results[indicator_name] = indicators[indicator_name](world)
+
+    return world, indicator_results

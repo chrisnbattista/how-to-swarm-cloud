@@ -12,7 +12,7 @@ def setup_plots():
     plt.show()
     sns.set_theme()
 
-def lj_desktop_data_viz(world, long_world_history, i, label=''):
+def lj_desktop_data_viz(world, long_world_history, i, label='', note=''):
     if i % 100 == 0:
         plt.clf()
         # p = sns.scatterplot(
@@ -30,6 +30,7 @@ def lj_desktop_data_viz(world, long_world_history, i, label=''):
         plt.title(label)
         ##plt.pause(0.00001)
         fig = plt.gcf()
+        fig.text(0.01, 0.01, note)
         fig.canvas.draw_idle()
         fig.canvas.start_event_loop(0.01)
 
@@ -64,21 +65,29 @@ def run_sim(data_viz=lj_desktop_data_viz):
             loop_duration = time.time() - last_loop_time
             last_loop_time += loop_duration
 
-            ## Data viz
-            data_viz(world, long_world_history, i, label=f"LJ Sim Timestep {i} - loop time {loop_duration}")
-
             ## Trajectory recording
             long_world_history[ i*n_particles : (i+1)*n_particles, : ] = world
 
             ## Sim step
-            world = experiments.advance_timestep(
+            world, indicator_results = experiments.advance_timestep(
                 world,
                 timestep,
                 integrators.integrate_rect_world,
                 [
                     lambda x: forces.pairwise_world_lennard_jones_potential(x, epsilon=epsilon, omega=omega),
                     lambda x: forces.viscous_damping_force(x, c)
-                ]
+                ],
+                {
+                    'hamiltonian': indicators.hamiltonian
+                }
+            )
+
+            ## Data viz
+            data_viz(world,
+                    long_world_history,
+                    i,
+                    label='Lennard Jones Particle Sim Timestep',
+                    note=f'Hamiltonian: {indicator_results["hamiltonian"]:.1f} | Timestep: {i} | Wall time per timestep: {loop_duration:.5f}'
             )
 
             ## BCs (periodic square)
