@@ -41,8 +41,8 @@ def run_sim(data_viz=lj_desktop_data_viz):
 
     ## Parameters
     timestep = 0.01
-    size = 350
-    n_particles = 100
+    size = 3500
+    n_particles = 1000
     n_steps = 100000
 
     epsilon = 100
