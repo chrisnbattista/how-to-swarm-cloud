@@ -1,5 +1,5 @@
-profile.tmp
 env/**
 pypy-env/**
 **/__pycache__/**
 data/**
+

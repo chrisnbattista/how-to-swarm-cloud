@@ -4,8 +4,7 @@ import numexpr as ne
 from sklearn.preprocessing import normalize
 
 def lennard_jones_potential(epsilon, omega, r):
-    ##return ne.evaluate('(4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6')
-    return (4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6
+    return ne.evaluate('(4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6')
 
 def pairwise_world_lennard_jones_potential(world, epsilon, omega):
     '''
@@ -43,8 +42,7 @@ def pairwise_world_lennard_jones_potential(world, epsilon, omega):
 
     # scale displacements by potentials
     expanded_potentials = potentials[:, :, np.newaxis]
-    ##return ne.evaluate('sum(differences * expanded_potentials, axis=1)')
-    return np.sum(differences * expanded_potentials, axis=1)
+    return ne.evaluate('sum(differences * expanded_potentials, axis=1)')
 
 # def slow_pairwise_world_lennard_jones_potential(world, epsilon, omega):
 #     '''
