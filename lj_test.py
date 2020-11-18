@@ -74,7 +74,7 @@ def run_sim(data_viz=lj_desktop_data_viz):
                 timestep,
                 integrators.integrate_rect_world,
                 [
-                    lambda x: forces.pairwise_world_lennard_jones_potential(x, epsilon=epsilon, omega=omega),
+                    lambda x: forces.pairwise_world_lennard_jones_force(x, epsilon=epsilon, omega=omega),
                     lambda x: forces.viscous_damping_force(x, c)
                 ],
                 {

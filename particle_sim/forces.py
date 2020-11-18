@@ -6,18 +6,20 @@ from sklearn.preprocessing import normalize
 def lennard_jones_potential(epsilon, omega, r):
     return ne.evaluate('(4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6')
 
-def pairwise_world_lennard_jones_potential(world, epsilon, omega):
+def lennard_jones_force(epsilon, omega, r):
+    return ne.evaluate('24 * epsilon / r * ( (2)*(omega/r)**2 - (omega/r)**6 )')
+
+def pairwise_world_lennard_jones_force(world, epsilon, omega):
     '''
-    Not timestep dependent as it is not time dependent as it is a potential field.
     '''
 
     # isolate particle position data
     coords = world[:,1:3]
 
-    # calculate pairwise potentials and distances
+    # calculate pairwise forces and distances
     p_dists = scipy.spatial.distance.pdist(coords)
-    potentials = scipy.spatial.distance.squareform(
-            lennard_jones_potential(epsilon, omega, p_dists) / p_dists
+    forces = scipy.spatial.distance.squareform(
+            lennard_jones_force(epsilon, omega, p_dists) / p_dists
     )
 
     # get absolute pairwise displacements
@@ -41,8 +43,8 @@ def pairwise_world_lennard_jones_potential(world, epsilon, omega):
     # )
 
     # scale displacements by potentials
-    expanded_potentials = potentials[:, :, np.newaxis]
-    return ne.evaluate('sum(differences * expanded_potentials, axis=1)')
+    expanded_forces = forces[:, :, np.newaxis]
+    return ne.evaluate('sum(differences * expanded_forces, axis=1)')
 
 # def slow_pairwise_world_lennard_jones_potential(world, epsilon, omega):
 #     '''
