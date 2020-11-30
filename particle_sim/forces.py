@@ -3,13 +3,25 @@ import scipy
 import numexpr as ne
 from sklearn.preprocessing import normalize
 
-def lennard_jones_potential(epsilon, omega, r):
-    return ne.evaluate('(4 * epsilon * omega**12)/r**12 - (4 * epsilon * omega**6)/r**6')
+def lennard_jones_potential(epsilon, sigma, r):
+    return ne.evaluate('( (4 * epsilon * sigma**12)/r**12 - (4 * epsilon * sigma**6)/r**6 )')
 
-def lennard_jones_force(epsilon, omega, r):
-    return ne.evaluate('24 * epsilon / r * ( (2)*(omega/r)**2 - (omega/r)**6 )')
+def sum_world_lennard_jones_potential(world, epsilon, sigma):
+    '''
+    '''
 
-def pairwise_world_lennard_jones_force(world, epsilon, omega):
+    # isolate particle position data
+    coords = world[:,1:3]
+
+    # calculate pairwise potentials and distances
+    p_dists = scipy.spatial.distance.pdist(coords)
+
+    return np.sum(lennard_jones_potential(epsilon, sigma, p_dists))
+
+def lennard_jones_force(epsilon, sigma, r):
+    return ne.evaluate('24 * epsilon / r * ( (2)*(sigma/r)**12 - (sigma/r)**6 )')
+
+def pairwise_world_lennard_jones_force(world, epsilon, sigma):
     '''
     '''
 
@@ -19,7 +31,7 @@ def pairwise_world_lennard_jones_force(world, epsilon, omega):
     # calculate pairwise forces and distances
     p_dists = scipy.spatial.distance.pdist(coords)
     forces = scipy.spatial.distance.squareform(
-            lennard_jones_force(epsilon, omega, p_dists) / p_dists
+            lennard_jones_force(epsilon, sigma, p_dists) / p_dists
     )
 
     # get absolute pairwise displacements
@@ -46,7 +58,7 @@ def pairwise_world_lennard_jones_force(world, epsilon, omega):
     expanded_forces = forces[:, :, np.newaxis]
     return ne.evaluate('sum(differences * expanded_forces, axis=1)')
 
-# def slow_pairwise_world_lennard_jones_potential(world, epsilon, omega):
+# def slow_pairwise_world_lennard_jones_potential(world, epsilon, sigma):
 #     '''
 #     '''
 #
@@ -55,7 +67,7 @@ def pairwise_world_lennard_jones_force(world, epsilon, omega):
 #         for j in range(world.shape[0]):
 #             if i == j: continue
 #             norm = np.linalg.norm(world.iloc[j][['b_1', 'b_2']] - world.iloc[i][['b_1', 'b_2']])
-#             magnitude = lennard_jones_potential(epsilon, omega, norm)
+#             magnitude = lennard_jones_potential(epsilon, sigma, norm)
 #             direction = ((world.iloc[j] - world.iloc[i])/norm)[['b_1', 'b_2']]
 #             potential_matrix[j] += direction * magnitude
 #
@@ -67,3 +79,14 @@ def viscous_damping_force(world, c):
     '''
 
     return -c * world[:, 4:6]
+
+def gravity_well(world, lamb):
+    '''
+    Exerts a constant gravitational force from the origin - assuming
+    the ground level simplified form of constant acceleration gravity.
+    '''
+
+    return -lamb / world[:, 3, None] * np.sign(world[:, 1:3]) * world[:, 1:3]
+
+def sum_world_potential_well(world, lamb):
+    pass

@@ -1,7 +1,7 @@
 import numpy as np
 import random, math
 
-def set_up_experiment(n_particles, radius, center=(0,0), min_dist=2):
+def set_up_experiment(n_particles, radius, center=(0,0), min_dist=4, random_speed=0):
     '''
         n_particles:    initial number of particles []
         radius:         initial radius of particle distribution [m]
@@ -21,6 +21,9 @@ def set_up_experiment(n_particles, radius, center=(0,0), min_dist=2):
 
         smallest_interparticle_distance = 0
 
+        candidate_v_1 = random.random()
+        candidate_v_2 = random.random()
+
         while smallest_interparticle_distance < min_dist:
             theta = random.random() * 2 * math.pi
             r = random.random() * radius
@@ -28,18 +31,16 @@ def set_up_experiment(n_particles, radius, center=(0,0), min_dist=2):
             candidate_b_2 = center[1] + r * math.sin(theta)
             test_df = world_state[:i, 1:3] - [candidate_b_1, candidate_b_2]
             norms = np.linalg.norm( test_df[:i, 1:3], axis=1 )
-            ##print(norms)
             if i > 0:
                 smallest_interparticle_distance = norms.min()
             else:
                 break
-            ##print(norms.min())
 
-        world_state[i, :] = (i, candidate_b_1, candidate_b_2, 10, 0, 0, 0)
+        world_state[i, :] = (i, candidate_b_1, candidate_b_2, 10, candidate_v_1, candidate_v_2, 0)
 
     return world_state
 
-def advance_timestep(world, timestep, integrator, forces=[], indicators={}):
+def advance_timestep(world, timestep, integrator, forces=[], indicators=[]):
     '''
         world:              state machine dataframe containing all particles [pd.Dataframe]
         timestep:           length of time to integrate over [s]
@@ -61,8 +62,8 @@ def advance_timestep(world, timestep, integrator, forces=[], indicators={}):
     integrator(world, force_matrix, timestep)
 
     ## Compute indicators
-    indicator_results = {}
-    for indicator_name in indicators.keys():
-        indicator_results[indicator_name] = indicators[indicator_name](world)
+    indicator_results = np.empty( (1, len(indicators)) )
+    for i in range(len(indicators)):
+        indicator_results[0, i] = indicators[i](world)
 
     return world, indicator_results

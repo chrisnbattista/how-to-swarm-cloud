@@ -11,30 +11,49 @@ def setup_plots():
     plt.ion()
     plt.show()
     sns.set_theme()
+    return plt.subplots(2,1,
+                        gridspec_kw={'height_ratios': [4, 1]},
+                        figsize=(7.5, 9)
+                        )
 
-def lj_desktop_data_viz(world, long_world_history, i, label='', note=''):
+def lj_desktop_data_viz(world, long_world_history, long_indicator_history, i, indicator_labels=[], label='', note='', fig=None, ax=None):
+    '''
+    '''
     if i % 100 == 0:
-        plt.clf()
-        # p = sns.scatterplot(
-        #     x='b_1',
-        #     y='b_2',
-        #     s=5,
-        #     hue='t',
-        #     data=long_world_history
-        # )
-        p2 = sns.scatterplot(
+
+        ax[0].clear()
+        p = sns.scatterplot(
             x=world[:,1],
             y=world[:,2],
-            color='k'
+            color='k',
+            ax=ax[0]
         )
-        plt.title(label)
-        ##plt.pause(0.00001)
-        fig = plt.gcf()
-        fig.text(0.01, 0.01, note)
+
+        if i % 1000 == 0:
+            n_indicators = len(indicator_labels)
+            ax[1].clear()
+            for ind in range(1, n_indicators+1):
+                sns.lineplot(
+                    x=long_indicator_history[:i, 0],
+                    y=long_indicator_history[:i, ind],
+                    ax=ax[1],
+                    legend=False
+            )
+
+            plt.legend(loc='lower right', labels=indicator_labels)
+
+        ##plt.title(label)
+        fig.canvas.set_window_title(label)
+
+        if not len(fig.texts):
+            fig.text(0.01, 0.01, note)
+        else:
+            fig.texts[0].set_text(note)
+
         fig.canvas.draw_idle()
         fig.canvas.start_event_loop(0.01)
 
-def run_sim(data_viz=lj_desktop_data_viz):
+def run_sim(data_viz=lj_desktop_data_viz, fig=None, ax=None):
 
     ## Record keeping
     start_time = time.time()
@@ -42,20 +61,34 @@ def run_sim(data_viz=lj_desktop_data_viz):
 
     ## Parameters
     timestep = 0.01
-    size = 350
-    n_particles = 100
-    n_steps = 100000
+    size = 600
+    n_particles = 50
+    n_steps = 1000000
+    min_dist = 4
 
-    epsilon = 100
-    omega = 3
-    c = 0.03
+    epsilon = 1
+    sigma = 12.5
+    c = 0
+    lamb = 0.0001
+
+    indicator_functions = [
+        lambda world: indicators.hamiltonian(world, [lambda world: forces.sum_world_lennard_jones_potential(world, epsilon, sigma)]),
+        lambda world: indicators.kinetic_energy(world),
+        lambda world: indicators.potential_energy(world, [lambda world: forces.sum_world_lennard_jones_potential(world, epsilon, sigma)]),
+    ]
+
+    n_indicators = len(indicator_functions)
 
     ## ICs
     world = experiments.set_up_experiment(
         radius=size/2,
         center=(size/2, size/2),
-        n_particles=n_particles)
+        n_particles=n_particles,
+        min_dist=min_dist,
+        random_speed=25)
+
     long_world_history = np.empty( (n_steps * n_particles, 7) )
+    long_indicator_history = np.empty( (n_steps, n_indicators + 1) )
 
     ## Sim loop
     try:
@@ -74,20 +107,29 @@ def run_sim(data_viz=lj_desktop_data_viz):
                 timestep,
                 integrators.integrate_rect_world,
                 [
-                    lambda x: forces.pairwise_world_lennard_jones_force(x, epsilon=epsilon, omega=omega),
-                    lambda x: forces.viscous_damping_force(x, c)
+                    lambda world: forces.pairwise_world_lennard_jones_force(world, epsilon=epsilon, sigma=sigma),
+                    lambda world: forces.viscous_damping_force(world, c)##,
+                    ##lambda world: forces.gravity_well(world, lamb)
                 ],
-                {
-                    'hamiltonian': indicators.hamiltonian
-                }
+                indicator_functions
             )
+
+            ## Indicator recording
+            # Index
+            long_indicator_history[ i, 0 ] = i
+            # Indicators
+            long_indicator_history[ i, 1: ] = indicator_results
 
             ## Data viz
             data_viz(world,
                     long_world_history,
+                    long_indicator_history,
                     i,
-                    label='Lennard Jones Particle Sim Timestep',
-                    note=f'Hamiltonian: {indicator_results["hamiltonian"]:.1f} | Timestep: {i} | Wall time per timestep: {loop_duration:.5f}'
+                    indicator_labels=["Hamiltonian", "Kinetic Energy", "Potential Energy"],
+                    label='Lennard Jones Particle Dynamics Simulation',
+                    note=f'Timestep: {i} | Wall time per timestep: {loop_duration:.5f}',
+                    fig=fig,
+                    ax=ax
             )
 
             ## BCs (periodic square)
@@ -101,5 +143,5 @@ def run_sim(data_viz=lj_desktop_data_viz):
     np.savetxt("./data/LJ Sim Run_" + str(dt.datetime.now()) + ".csv", long_world_history, delimiter=",")
 
 if __name__ == '__main__':
-    setup_plots()
-    run_sim()
+    fig, ax = setup_plots()
+    run_sim(fig=fig, ax=ax)
