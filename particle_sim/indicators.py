@@ -35,3 +35,14 @@ def hamiltonian(world, potentials=[]):
     return \
         kinetic_energy(world) + \
         potential_energy(world, potentials)
+
+def mse_trajectories(reference_trajectories, test_trajectories, n_particles):
+    '''
+    Calculates the aggregate mean squared error between two sets of particle
+    trajectories, with the sets containing an arbitrary but corresponding
+    number of particles.
+    '''
+
+    differences = test_trajectories[:, 1:3] - reference_trajectories[:, 1:3]
+    norms = np.linalg.norm(differences, axis=1)
+    return np.sum(norms**2) / n_particles

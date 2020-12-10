@@ -6,6 +6,7 @@ from sklearn.preprocessing import normalize
 def lennard_jones_potential(epsilon, sigma, r):
     return ne.evaluate('( (4 * epsilon * sigma**12)/r**12 - (4 * epsilon * sigma**6)/r**6 )')
 
+
 def sum_world_lennard_jones_potential(world, epsilon, sigma):
     '''
     '''
@@ -18,8 +19,10 @@ def sum_world_lennard_jones_potential(world, epsilon, sigma):
 
     return np.sum(lennard_jones_potential(epsilon, sigma, p_dists))
 
+
 def lennard_jones_force(epsilon, sigma, r):
     return ne.evaluate('24 * epsilon / r * ( (2)*(sigma/r)**12 - (sigma/r)**6 )')
+
 
 def pairwise_world_lennard_jones_force(world, epsilon, sigma):
     '''
@@ -73,6 +76,7 @@ def pairwise_world_lennard_jones_force(world, epsilon, sigma):
 #
 #     return potential_matrix
 
+
 def viscous_damping_force(world, c):
     '''
     F_damping = -cv
@@ -80,13 +84,20 @@ def viscous_damping_force(world, c):
 
     return -c * world[:, 4:6]
 
+
 def gravity_well(world, lamb):
     '''
     Exerts a constant gravitational force from the origin - assuming
     the ground level simplified form of constant acceleration gravity.
     '''
 
-    return -lamb / world[:, 3, None] * np.sign(world[:, 1:3]) * world[:, 1:3]
+    return -lamb / world[:, 3, None] * world[:, 1:3]
 
-def sum_world_potential_well(world, lamb):
-    pass
+
+def sum_world_gravity_potential(world, lamb):
+    '''
+    '''
+
+    G = np.sum( np.abs( 0.5 * lamb * np.linalg.norm(world[:, 1:3], axis=1)**2 / world[:, 3] ) )
+    ##print(G)
+    return G
