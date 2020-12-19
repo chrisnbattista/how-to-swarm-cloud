@@ -21,6 +21,7 @@ six
 sklearn
 threadpoolctl
 toml
+torch
 typed-ast
 wrapt
 numexpr

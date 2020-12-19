@@ -1,4 +1,10 @@
-from particle_sim import *
+# Demonstrate graphically the Lennard-Jones potential simulation scenario
+
+
+
+
+
+from particle_sim import indicators, forces, integrators, experiments
 
 import seaborn as sns
 import matplotlib.pyplot as plt

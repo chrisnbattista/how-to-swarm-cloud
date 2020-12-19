@@ -45,4 +45,4 @@ def mse_trajectories(reference_trajectories, test_trajectories, n_particles):
 
     differences = test_trajectories[:, 1:3] - reference_trajectories[:, 1:3]
     norms = np.linalg.norm(differences, axis=1)
-    return np.sum(norms**2) / n_particles
+    return ne.evaluate('sum(norms**2)') / n_particles
