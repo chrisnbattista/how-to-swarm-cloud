@@ -53,7 +53,7 @@ def advance_timestep(world, timestep, integrator, forces=[], indicators=[]):
     force_matrix = np.zeros ( (world.shape[0], 2) )
 
     for force in forces:
-        force_matrix += force(world)
+        force_matrix = force_matrix + force(world)
 
     ## Advance the timestep itself
     world[:,6] += timestep

@@ -24,7 +24,7 @@ def lennard_jones_force(epsilon, sigma, r):
     return ne.evaluate('24 * epsilon / r * ( (2)*(sigma/r)**12 - (sigma/r)**6 )')
 
 
-def pairwise_world_lennard_jones_force(world, epsilon, sigma):
+def pairwise_world_lennard_jones_force(world, epsilon, sigma, **kwargs):
     '''
     '''
 
@@ -77,7 +77,7 @@ def pairwise_world_lennard_jones_force(world, epsilon, sigma):
 #     return potential_matrix
 
 
-def viscous_damping_force(world, c):
+def viscous_damping_force(world, c, **kwargs):
     '''
     F_damping = -cv
     '''
@@ -85,7 +85,7 @@ def viscous_damping_force(world, c):
     return -c * world[:, 4:6]
 
 
-def gravity_well(world, lamb):
+def gravity_well(world, lamb, **kwargs):
     '''
     Exerts a constant gravitational force from the origin - assuming
     the ground level simplified form of constant acceleration gravity.
@@ -94,7 +94,7 @@ def gravity_well(world, lamb):
     return -lamb / world[:, 3, None] * world[:, 1:3]
 
 
-def sum_world_gravity_potential(world, lamb):
+def sum_world_gravity_potential(world, lamb, **kwargs):
     '''
     '''
 
