@@ -29,19 +29,14 @@ class PhysicsModel(torch.nn.Module):
         '''
         '''
 
-        learned_function = lambda world: forces.pairwise_world_lennard_jones_force(world, **{ \
-            'epsilon': self.epsilon.data,
-            'sigma': self.sigma.data
-        })
-
-        args = {**self.params, **{'forces':self.params['forces'] + [learned_function]}}
-
         last_state = self.physics_func.apply(
             agent,
             last_state,
-            args,
+            self.params,
             self.sigma,
             self.epsilon
         )
+
+        print((self.epsilon.data, self.sigma.data))
         
         return last_state

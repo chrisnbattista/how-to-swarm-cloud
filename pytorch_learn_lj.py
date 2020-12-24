@@ -29,7 +29,7 @@ base_params = {
 }
 
 learned_params = {
-    'epsilon': 1,
+    'epsilon': 2,
     'sigma': 25
 }
 
@@ -44,7 +44,7 @@ true_params = {
 true_params_aug = {**base_params, **true_params}
 
 hyperparams = {
-    'learning_rate': 0.01,
+    'learning_rate': 0.1,
     'momentum': 0.9
 }
 
@@ -57,7 +57,7 @@ data = data_loaders.SimSamples("./sim_data/" + random.choice(os.listdir('./sim_d
 
 # Define world params
 world_params = {
-    'timestep': data.step_indices[1] - data.step_indices[1],
+    'timestep': data.step_indices[1] - data.step_indices[0],
     'integrator': integrators.integrate_rect_world,
     'forces': [
         lambda world: forces.viscous_damping_force(world, **true_params),
@@ -88,7 +88,8 @@ optimizer = torch.optim.SGD(
 # Input: (x): All agent positions at the timestep (count per timestep: n_agents * n_dims)
 # Output (y): Each agent position at the next timestep (count per timestep: n_dims)
 
-##writer = SummaryWriter()
+## Initialize TensorBoard visualization
+writer = SummaryWriter()
 
 
 for i in range(min(int(len(data)/10), 100)): # step through iterations
@@ -99,15 +100,16 @@ for i in range(min(int(len(data)/10), 100)): # step through iterations
     # Get model predictions
     y_pred = model(i % data.n_agents, x)
 
-    print(y_pred)
-    print(y)
-
     # Compute loss
     loss = criterion(y_pred, y)
-    print(loss)
+    writer.add_scalar("Loss/train", loss, i)
+    print(loss.data)
 
-    torchviz.make_dot(loss).render("graph", format="png")
+    ##torchviz.make_dot(loss).render("graph", format="png")
 
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
+
+writer.flush()
+writer.close()
