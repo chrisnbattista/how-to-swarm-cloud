@@ -9,7 +9,8 @@ import models, data_loaders
 import numpy as np
 import datetime as dt
 import math, random, os
-import torch
+import torch, torchviz
+from torch.utils.tensorboard import SummaryWriter
 
 
 
@@ -34,7 +35,7 @@ learned_params = {
 
 # TODO: put in .ini file
 true_params = {
-    'epsilon': 1,
+    'epsilon': 2,
     'sigma': 25,
     'c': 0.01,
     'lamb': 0.01
@@ -59,7 +60,6 @@ world_params = {
     'timestep': data.step_indices[1] - data.step_indices[1],
     'integrator': integrators.integrate_rect_world,
     'forces': [
-        lambda world: forces.pairwise_world_lennard_jones_force(world, **true_params),
         lambda world: forces.viscous_damping_force(world, **true_params),
         lambda world: forces.gravity_well(world, **true_params)
     ]
@@ -88,19 +88,25 @@ optimizer = torch.optim.SGD(
 # Input: (x): All agent positions at the timestep (count per timestep: n_agents * n_dims)
 # Output (y): Each agent position at the next timestep (count per timestep: n_dims)
 
+##writer = SummaryWriter()
 
-for i in range(len(data)): # step through iterations
+
+for i in range(min(int(len(data)/10), 100)): # step through iterations
     # define x and y from state pairs
     x, y = data[i]
+    x.requires_grad = True
 
     # Get model predictions
-    y_pred = model(x)[i % data.n_agents][1:3]
+    y_pred = model(i % data.n_agents, x)
 
     print(y_pred)
     print(y)
 
     # Compute loss
-    loss = criterion(y_pred, torch.from_numpy(y))
+    loss = criterion(y_pred, y)
+    print(loss)
+
+    torchviz.make_dot(loss).render("graph", format="png")
 
     optimizer.zero_grad()
     loss.backward()

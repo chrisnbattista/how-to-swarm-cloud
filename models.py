@@ -1,5 +1,6 @@
 import torch
-from particle_sim import experiments
+from particle_sim import experiments, forces
+import functions
 
 
 
@@ -21,17 +22,26 @@ class PhysicsModel(torch.nn.Module):
         self.epsilon = torch.nn.Parameter(torch.randn(()))
         self.sigma = torch.nn.Parameter(torch.randn(()))
 
-    def forward(self, last_state):
+        ## Define functions to apply during forward propagation
+        self.physics_func = functions.PhysicsStep
+
+    def forward(self, agent, last_state):
         '''
         '''
 
-        predicted_next_state, indicators = \
-            experiments.advance_timestep(last_state, **self.params)
+        learned_function = lambda world: forces.pairwise_world_lennard_jones_force(world, **{ \
+            'epsilon': self.epsilon.data,
+            'sigma': self.sigma.data
+        })
+
+        args = {**self.params, **{'forces':self.params['forces'] + [learned_function]}}
+
+        last_state = self.physics_func.apply(
+            agent,
+            last_state,
+            args,
+            self.sigma,
+            self.epsilon
+        )
         
-        return torch.from_numpy(predicted_next_state)
-    
-    def backward(self):
-        '''
-        '''
-
-        return 1
+        return last_state

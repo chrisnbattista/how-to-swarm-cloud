@@ -5,6 +5,7 @@
 
 
 import numpy as np
+import torch
 
 
 
@@ -19,10 +20,13 @@ class SimSamples:
         '''
         '''
 
-        self.data = np.loadtxt(
-            path,
-            delimiter=',',
-            skiprows=1
+        self.data = torch.tensor(
+            np.loadtxt(
+                path,
+                delimiter=',',
+                skiprows=1
+            ),
+            requires_grad=False
         )
 
         self.step_indices = np.unique(self.data[:,6])
