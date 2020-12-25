@@ -19,8 +19,8 @@ class PhysicsModel(torch.nn.Module):
         self.params = kwparams
 
         ## Define learnable parameters
-        self.epsilon = torch.nn.Parameter(torch.randn(()))
-        self.sigma = torch.nn.Parameter(torch.randn(()))
+        self.epsilon = torch.nn.Parameter(torch.Tensor((2.,)))
+        self.sigma = torch.nn.Parameter(torch.Tensor((25.,)))
 
         ## Define functions to apply during forward propagation
         self.physics_func = functions.PhysicsStep
@@ -37,6 +37,6 @@ class PhysicsModel(torch.nn.Module):
             self.epsilon
         )
 
-        print((self.epsilon.data, self.sigma.data))
+        ##print((self.epsilon.data, self.sigma.data))
         
         return last_state

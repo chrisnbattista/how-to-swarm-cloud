@@ -46,8 +46,6 @@ class PhysicsStep (torch.autograd.Function):
         '''
         '''
 
-        print('backwardsing')
-
         to_diff = ('sigma', 'epsilon')
         diffs = [torch.Tensor([0, 0]) for _ in range(2)]
 
@@ -57,7 +55,7 @@ class PhysicsStep (torch.autograd.Function):
         # utilizing Central Difference Theorem
         for i in range(len(to_diff)):
             # loop through the positive and negative perturbations (three-point finite difference)
-            for d in (delta, -delta):
+            for d in (delta,):
 
                 func_args = {
                     'epsilon': ctx.epsilon.data,
@@ -81,7 +79,7 @@ class PhysicsStep (torch.autograd.Function):
                 )
 
                 ##different_state = torch.tensor()##)
-                diffs[i] += different_state / d
+                diffs[i] += (different_state - ctx.predicted_state) / d
 
-        print(diffs)
-        return None, None, None, grad_output[0] * diffs[0], grad_output[1] * diffs[1]
+        ##print(diffs)
+        return None, None, None, diffs[0], diffs[1]

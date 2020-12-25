@@ -90,9 +90,10 @@ optimizer = torch.optim.SGD(
 
 ## Initialize TensorBoard visualization
 writer = SummaryWriter()
+print("##########")
 
 
-for i in range(min(int(len(data)/10), 100)): # step through iterations
+for i in range(int(len(data))): # step through iterations
     # define x and y from state pairs
     x, y = data[i]
     x.requires_grad = True
@@ -102,8 +103,18 @@ for i in range(min(int(len(data)/10), 100)): # step through iterations
 
     # Compute loss
     loss = criterion(y_pred, y)
+
+    # Log loss and current parameters
     writer.add_scalar("Loss/train", loss, i)
-    print(loss.data)
+    writer.add_scalar("Parameter/sigma", model.sigma.data, i)
+    writer.add_scalar("Parameter/epsilon", model.epsilon.data, i)
+
+    if i % int(len(data)/10) == 0:
+        print("#", flush=True, end='')
+
+    #print(f"Loss: {loss.data}")
+    #print(f"Sigma: {model.sigma.data}")
+    #print(f"Epsilon: {model.epsilon.data}")
 
     ##torchviz.make_dot(loss).render("graph", format="png")
 
