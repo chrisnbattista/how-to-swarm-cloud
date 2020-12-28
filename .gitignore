@@ -3,3 +3,4 @@ pypy-env/**
 **/__pycache__/**
 data/**
 **/.DS_Store
+.DS_Store
