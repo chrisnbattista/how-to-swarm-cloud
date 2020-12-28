@@ -1,7 +1,6 @@
-env/**
-pypy-env/**
+hts/env/**
 **/__pycache__/**
-data/**
+hts/data/**
 **/.DS_Store
 .DS_Store
 .vscode/**
