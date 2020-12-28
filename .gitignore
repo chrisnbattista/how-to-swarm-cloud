@@ -4,3 +4,5 @@ pypy-env/**
 data/**
 **/.DS_Store
 .DS_Store
+.vscode/**
+how_to_swarm_cloud.egg-info/**
