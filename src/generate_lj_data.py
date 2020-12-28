@@ -35,7 +35,7 @@ true_params_aug = {**base_params, **true_params}
 
 def run_sim_and_write(seed):
     test_trajs, test_inds = sim.run_sim(true_params_aug, seed)
-    np.savetxt(f"./sim_data/lj_{seed}.csv", test_trajs, comments='', delimiter=',', fmt='%10.3f', header='id,b_1,b_2,m,v_1,v_2,t')
+    np.savetxt(f"../sim../data/sim_data/lj_{seed}.csv", test_trajs, comments='', delimiter=',', fmt='%10.3f', header='id,b_1,b_2,m,v_1,v_2,t')
 
 
 with Pool(SIM_COUNT) as p:

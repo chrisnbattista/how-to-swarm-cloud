@@ -50,7 +50,7 @@ hyperparams = {
 
 
 ## Get data
-data = data_loaders.SimSamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
+data = data_loaders.SimSamples("../../data/sim_data/" + random.choice(os.listdir('../../data/sim_data')))
 
 
 ## Initialize model
