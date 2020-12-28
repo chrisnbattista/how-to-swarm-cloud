@@ -5,3 +5,4 @@ hts/data/**
 .DS_Store
 .vscode/**
 how_to_swarm_cloud.egg-info/**
+.ipynb_checkpoints/**
