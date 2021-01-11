@@ -10,9 +10,11 @@ import math, random, os
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
 
-from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim
+from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim, exploration
 import models, data_loaders
+import tb_logging
 
 
 
@@ -91,38 +93,50 @@ optimizer = torch.optim.SGD(
 # Output (y): Each agent position at the next timestep (count per timestep: n_dims)
 
 ## Initialize TensorBoard visualization
-writer = SummaryWriter()
+tb_logging.writer = SummaryWriter()
 print("|-------->|")
 
+if not input("Please enter any input to skip learning"):
 
-for i in range(int(len(data))): # step through iterations
-    # define x and y from state pairs
-    x, y = data[i]
-    x.requires_grad = True
+    for i in range(int(len(data))): # step through iterations
+        
+        tb_logging.epoch = i # synchronize epoch across functions
 
-    # Get model predictions
-    y_pred = model(i % data.n_agents, x)
+        # define x and y from state pairs
+        x, y = data[i]
+        x.requires_grad = True
 
-    # Compute loss
-    loss = criterion(y_pred, y)
+        # Get model predictions
+        y_pred = model(i % data.n_agents, x)
 
-    # Log loss and current parameters
-    writer.add_scalar("Loss/train", loss, i)
-    writer.add_scalar("Parameter/sigma", model.sigma.data, i)
-    writer.add_scalar("Parameter/epsilon", model.epsilon.data, i)
+        # Compute loss
+        loss = criterion(y_pred, y)
 
-    if i % int(len(data)/10) == 0:
-        print("#", flush=True, end='')
+        # Log loss and current parameters
+        tb_logging.writer.add_scalar("Loss/train", loss, i)
+        tb_logging.writer.add_scalar("Parameter/sigma", model.sigma.data, i)
+        tb_logging.writer.add_scalar("Parameter/epsilon", model.epsilon.data, i)
 
-    #print(f"Loss: {loss.data}")
-    #print(f"Sigma: {model.sigma.data}")
-    #print(f"Epsilon: {model.epsilon.data}")
+        if i % int(len(data)/10) == 0:
+            print("#", flush=True, end='')
 
-    ##torchviz.make_dot(loss).render("graph", format="png")
+        #print(f"Loss: {loss.data}")
+        #print(f"Sigma: {model.sigma.data}")
+        #print(f"Epsilon: {model.epsilon.data}")
 
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+        ##torchviz.make_dot(loss).render("graph", format="png")
 
-writer.flush()
-writer.close()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    tb_logging.writer.flush()
+    tb_logging.writer.close()
+
+else:
+    exploration.generate_cost_plot(model, data, criterion,
+                                    {
+                                        'sigma':range(0, 50, 5),
+                                        'epsilon':range(0, 10, 2)
+                                    }
+    )

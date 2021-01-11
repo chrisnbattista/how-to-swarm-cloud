@@ -6,7 +6,7 @@
 
 import torch
 from hts.multi_agent_kinetics import experiments, forces
-
+import tb_logging
 
 
 
@@ -49,13 +49,13 @@ class PhysicsStep (torch.autograd.Function):
         to_diff = ('sigma', 'epsilon')
         diffs = [torch.Tensor([0, 0]) for _ in range(2)]
 
-        delta = 1
+        delta = 0.1
 
         # loop through different parameters to take partials
         # utilizing Central Difference Theorem
         for i in range(len(to_diff)):
             # loop through the positive and negative perturbations (three-point finite difference)
-            for d in (delta,):
+            for d in (delta,-delta):
 
                 func_args = {
                     'epsilon': ctx.epsilon.data,
@@ -81,5 +81,5 @@ class PhysicsStep (torch.autograd.Function):
                 ##different_state = torch.tensor()##)
                 diffs[i] += (different_state - ctx.predicted_state) / d
 
-        ##print(diffs)
+        tb_logging.writer.add_scalar("Average error", diffs[0].mean(), tb_logging.epoch)
         return None, None, None, diffs[0], diffs[1]

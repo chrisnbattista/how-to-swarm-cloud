@@ -1,4 +1,5 @@
 hts/env/**
+hts/runs/**
 **/__pycache__/**
 hts/data/**
 **/.DS_Store

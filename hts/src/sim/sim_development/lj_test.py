@@ -4,7 +4,7 @@
 
 
 
-from particle_sim import indicators, forces, integrators, experiments
+from hts.multi_agent_kinetics import indicators, forces, integrators, experiments
 
 import seaborn as sns
 import matplotlib.pyplot as plt
