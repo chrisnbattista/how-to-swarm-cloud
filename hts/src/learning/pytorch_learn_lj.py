@@ -52,9 +52,11 @@ hyperparams = {
     'momentum': 0.9
 }
 
-
 ## Get data
-data = data_loaders.SimSamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
+if input("Enter something if you want to use single step cost function >"):
+    data = data_loaders.SimStateToOneAgentStepSamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
+else:
+    data = data_loaders.SimICsToFullAgentTrajectorySamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
 
 
 ## Initialize model
@@ -94,9 +96,8 @@ optimizer = torch.optim.SGD(
 
 ## Initialize TensorBoard visualization
 tb_logging.writer = SummaryWriter()
-print("|-------->|")
 
-if not input("Please enter any input to skip learning"):
+if not input("Please enter any input to skip learning >"):
 
     for i in range(int(len(data))): # step through iterations
         
@@ -136,7 +137,8 @@ if not input("Please enter any input to skip learning"):
 else:
     exploration.generate_cost_plot(model, data, criterion,
                                     {
-                                        'sigma':range(0, 50, 5),
-                                        'epsilon':range(0, 10, 2)
-                                    }
+                                        'sigma':range(-50, 50, 5),
+                                        'epsilon':range(-10, 10, 2)
+                                    },
+                                    range(0,len(data), 1)
     )

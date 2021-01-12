@@ -9,7 +9,7 @@ class PhysicsModel(torch.nn.Module):
     '''
     '''
 
-    def __init__(self, **kwparams):
+    def __init__(self, epsilon=2, sigma=25, **kwparams):
         '''
         '''
 
@@ -19,8 +19,8 @@ class PhysicsModel(torch.nn.Module):
         self.params = kwparams
 
         ## Define learnable parameters
-        self.epsilon = torch.nn.Parameter(torch.Tensor((2.,)))
-        self.sigma = torch.nn.Parameter(torch.Tensor((25.,)))
+        self.epsilon = torch.nn.Parameter(torch.Tensor((float(epsilon),)))
+        self.sigma = torch.nn.Parameter(torch.Tensor((float(sigma),)))
 
         ## Define functions to apply during forward propagation
         self.physics_func = functions.PhysicsStep

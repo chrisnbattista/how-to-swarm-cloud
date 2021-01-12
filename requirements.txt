@@ -23,6 +23,7 @@ threadpoolctl
 toml
 torch
 tensorboard
+tqdm
 typed-ast
 wrapt
 numexpr
