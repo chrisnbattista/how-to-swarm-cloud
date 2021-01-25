@@ -12,7 +12,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 
-from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim, exploration
+from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim, viz
 import models, data_loaders
 import tb_logging
 
@@ -52,10 +52,12 @@ hyperparams = {
     'momentum': 0.9
 }
 
+choice = 'single step'
 ## Get data
 if input("Enter something if you want to use single step cost function >"):
     data = data_loaders.SimStateToOneAgentStepSamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
 else:
+    choice = 'forward run'
     data = data_loaders.SimICsToFullAgentTrajectorySamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
 
 
@@ -72,7 +74,10 @@ world_params = {
 }
 
 # Create model object to call sim
-model = models.PhysicsModel(**world_params)
+if choice == 'single step':
+    model = models.PhysicsSingleStepModel(**world_params)
+else:
+    model = models.PhysicsForwardRunModel(**world_params)
 
 
 ## Import loss function
@@ -135,7 +140,7 @@ if not input("Please enter any input to skip learning >"):
     tb_logging.writer.close()
 
 else:
-    exploration.generate_cost_plot(model, data, criterion,
+    viz.generate_cost_plot(model, data, criterion,
                                     {
                                         'sigma':range(-50, 50, 5),
                                         'epsilon':range(-10, 10, 2)

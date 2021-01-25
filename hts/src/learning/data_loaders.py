@@ -113,7 +113,7 @@ class SimICsToFullAgentTrajectorySamples:
         return (
             self.data[0,:],
             self.data[
-                n + range(0, self.n_steps-1, self.n_agents),
+                np.arange(0, self.n_steps-1, self.n_agents) + n,
                 1:3
             ]
         )

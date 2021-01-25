@@ -4,39 +4,34 @@
 
 
 
-from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim
+from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim, serialize
 import numpy as np
 import datetime as dt
 import math, random
 from multiprocessing import Pool
 
 
-SIM_COUNT = 100
+SIM_COUNT = 1
 
 
 base_params = {
     'timestep': 0.01,
-    'size': 800, # rename to initialization_radius
-    'n_particles': 20,
-    'n_steps': 1000,
-    'min_dist': 20, # rename for clarity
-    'init_speed': 50,
-    'c': 0.01,
-    'lambda': 0.01,
-    'record_sparsity':1
+    'size': 8, # rename to initialization_radius
+    'n_agents': 3,
+    'n_timesteps': 10000,
+    'min_dist': 2, # rename for clarity
+    'init_speed': 0
 }
 
 true_params = {
-    'epsilon': 1,
-    'sigma': 25
+    'epsilon': 25,
+    'sigma': 1
 }
 
-true_params_aug = {**base_params, **true_params}
-
 def run_sim_and_write(seed):
-    test_trajs, test_inds = sim.run_sim(true_params_aug, seed)
-    np.savetxt(f"./data/sim_data/lj_{seed}.csv", test_trajs, comments='', delimiter=',', fmt='%10.3f', header='id,b_1,b_2,m,v_1,v_2,t')
-
+    true_params_aug = {**base_params, **true_params}
+    world = sim.run_random_circle_lj_sim(true_params_aug, seed)
+    serialize.save_world(world, './data', true_params_aug, seed)
 
 with Pool(SIM_COUNT) as p:
 

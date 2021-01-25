@@ -4,10 +4,15 @@
 
 
 
-from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim
+
 import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 import datetime as dt
-import math, random
+import math, random, itertools
+
+from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim
 
 
 
@@ -44,6 +49,31 @@ hyperparams = {
     'd': 0.1
 }
 
+if input("Enter any input to generate cost landscape >"):
+
+    sigma_range = np.linspace(22, 28, 25)
+    epsilon_range = np.linspace(0.5, 1.5, 25)
+    combinations = list(itertools.product(sigma_range, epsilon_range))
+
+    cost_data = np.empty( (len(combinations), 3) )
+    
+    for combo in tqdm(range(len(combinations))):
+
+        test_params = {**base_params, **{'sigma': combinations[combo][0], 'epsilon': combinations[combo][1]}}
+        trajs, inds = sim.run_sim(test_params, base_params['seed'])
+        loss = indicators.mse_trajectories(true_trajs, trajs, base_params['n_particles'])
+        cost_data[combo] = combinations[combo] + (loss,)
+    
+    print(cost_data)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    surf = ax.plot_trisurf(cost_data[:,0], cost_data[:,1], cost_data[:,2])
+    ax.set_xlabel('sigma')
+    ax.set_ylabel('epsilon')
+    ax.set_zlabel("cost")
+    plt.show()
+
 for i in range(100):
 
     ### Test
@@ -70,3 +100,4 @@ for i in range(100):
 
         d_param = (plus_d_cost - minus_d_cost)
         learned_params[p] -= hyperparams['alpha'] * math.copysign(1, d_param)
+        
