@@ -1,0 +1,1 @@
+{"timestep": 0.01, "size": 20, "n_agents": 3, "n_timesteps": 10000, "min_dist": 4, "init_speed": 0, "epsilon": 25, "sigma": 1}
