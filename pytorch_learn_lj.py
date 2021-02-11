@@ -6,73 +6,62 @@
 
 import numpy as np
 import datetime as dt
-import math, random, os
+import math, random, os, glob
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 
-from multi_agent_kinetics import indicators, forces, integrators, experiments, sim, viz
+from multi_agent_kinetics import indicators, forces, integrators, experiments, sim, viz, serialize
 from hts.learning import models, data_loaders, tb_logging
 
 
 
+## Get data
+path = random.choice(
+    serialize.list_worlds(
+        random.choice(
+            glob.glob('./data/*/')
+        )
+    )
+)
+print(f"Choosing world {path}")
+
+choice = 'single step'
+
+if input("Enter something if you want to use single step cost function >"):
+    data = data_loaders.SimStateToOneAgentStepSamples(path)
+else:
+    choice = 'forward run'
+    data = data_loaders.SimICsToFullAgentTrajectorySamples(path)
+
+loaded_params = serialize.load_world(path)[1]
 
 
-## Define simulation and learning parameters
-base_params = {
-    'timestep': 0.01,
-    'size': 800, # rename to initialization_radius
-    'n_particles': 20,
-    'n_steps': 1000,
-    'min_dist': 20, # rename for clarity
-    'init_speed': 50,
-    'c': 0.01,
-    'lambda': 0.01
+
+## Initialize model
+
+# Define world params, excluding the force to be learned
+# i.e., background dynamics
+world_params = {**loaded_params, \
+    **{
+        'integrator': integrators.integrate_rect_world,
+    } \
 }
 
+# Define initial guesses
 learned_params = {
     'epsilon': 2,
     'sigma': 25
 }
 
-# TODO: put in .ini file
-true_params = {
-    'epsilon': 2,
-    'sigma': 25,
-    'c': 0.01,
-    'lamb': 0.01
-}
-
-true_params_aug = {**base_params, **true_params}
-
+# Define learning hyperparameters
 hyperparams = {
     'learning_rate': 0.1,
     'momentum': 0.9
 }
 
-choice = 'single step'
-## Get data
-if input("Enter something if you want to use single step cost function >"):
-    data = data_loaders.SimStateToOneAgentStepSamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
-else:
-    choice = 'forward run'
-    data = data_loaders.SimICsToFullAgentTrajectorySamples("./data/sim_data/" + random.choice(os.listdir('./data/sim_data')))
-
-
-## Initialize model
-
-# Define world params
-world_params = {
-    'timestep': data.step_indices[1] - data.step_indices[0],
-    'integrator': integrators.integrate_rect_world,
-    'forces': [
-        lambda world: forces.viscous_damping_force(world, **true_params),
-        lambda world: forces.gravity_well(world, **true_params)
-    ]
-}
-
-# Create model object to call sim
+# Create model object
 if choice == 'single step':
     model = models.PhysicsSingleStepModel(**world_params)
 else:
@@ -141,8 +130,8 @@ if not input("Please enter any input to skip learning >"):
 else:
     viz.generate_cost_plot(model, data, criterion,
                                     {
-                                        'sigma':range(-50, 50, 5),
-                                        'epsilon':range(-10, 10, 2)
+                                        'sigma':np.linspace(0, 2, 30),
+                                        'epsilon':np.linspace(20, 30, 30)
                                     },
                                     range(0,len(data), 1)
     )

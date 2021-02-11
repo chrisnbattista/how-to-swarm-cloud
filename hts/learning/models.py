@@ -63,7 +63,7 @@ class PhysicsForwardRunModel(torch.nn.Module):
         '''
         '''
 
-        last_state = self.physics_func.apply(
+        trajectories = self.physics_func.apply(
             agent,
             initial_state,
             self.params,
@@ -71,4 +71,4 @@ class PhysicsForwardRunModel(torch.nn.Module):
             self.epsilon
         )
         
-        return last_state
+        return torch.Tensor(trajectories)

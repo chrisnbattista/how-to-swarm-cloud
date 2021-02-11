@@ -24,26 +24,32 @@ class PhysicsForwardRun (torch.autograd.Function):
         '''
         '''
 
-        broadcasted_ic = initial_state[None, :]
-
         ctx.agent = agent
-        ctx.initial_state = broadcasted_ic
+        ctx.initial_state = initial_state
         full_params = {**params, **{
             'sigma': sigma,
             'epsilon': epsilon
         }}
-
         ctx.full_params = full_params
+
+        # Function construction
+        learned_function = lambda world: forces.pairwise_world_lennard_jones_force(world, **{ \
+            'epsilon': epsilon.data,
+            'sigma': sigma.data
+        })
+
+        ##print(f'{epsilon.data} {sigma.data}')
 
         world = worlds.World(
             initial_state=initial_state,
-            **full_params
+            forces=[learned_function],
+            **params
         )
 
         # Run forward certain number of steps and return all trajectories
-        world.advance_state(full_params['n_steps'])
+        world.advance_state(full_params['n_timesteps']-1)
         ctx.history = world.get_history().copy()
-        return world.get_history()
+        return torch.Tensor(world.get_history()[agent+params['n_agents']::params['n_agents'],3:5])
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -106,15 +112,12 @@ class PhysicsEngine:
         })
 
         # Setup
-        args = {**params, **{'forces':params['forces'] + [learned_function]}}
+        args = {**params, **{'forces':[learned_function]}}
 
         world = worlds.World(
             initial_state=last_state,
             **args
         )
-
-        ##print(last_state)
-        ##print(world.get_state())
 
         # The actual forward step
         world.advance_state()
@@ -144,7 +147,7 @@ class PhysicsStep (torch.autograd.Function, PhysicsEngine):
         next_state = PhysicsEngine.time_step(last_state, params, sigma, epsilon)
         
         # Downselect to requested agent
-        state = torch.tensor(next_state[agent][1:3], requires_grad=True)
+        state = torch.tensor(next_state[agent][3:5], requires_grad=True)
         ctx.predicted_state = state
 
         return state

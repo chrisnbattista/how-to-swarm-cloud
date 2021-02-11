@@ -33,9 +33,13 @@ class SimStateToOneAgentStepSamples:
             ),
             requires_grad=False
         )
+        try:
+            self.data = self.data[:,:7]
+        except:
+            pass
 
-        self.step_indices = np.unique(self.data[:,6])
-        self.agents = np.unique(self.data[:,0])
+        self.step_indices = np.unique(self.data[:,0])
+        self.agents = np.unique(self.data[:,1])
 
         self.n_steps = len(self.step_indices)
         self.n_agents = len(self.agents)
@@ -54,16 +58,22 @@ class SimStateToOneAgentStepSamples:
         Loops through the data in two tiers:
             - every timestep
             - every agent within that timestep
+        Returns x, y where
+            x = (agent_id, full state at time t)
+            y = agent state at time t+1
         '''
 
         return (
-            self.data[
-                int(n/self.n_agents) * self.n_agents : int(n/self.n_agents) * self.n_agents + self.n_agents,
-                :
-                ],
+            (
+                n % self.n_agents,
+                self.data[
+                    int(n/self.n_agents) * self.n_agents : int(n/self.n_agents) * self.n_agents + self.n_agents,
+                    :
+                    ]
+            ),
             self.data[
                 self.n_agents + n,
-                1:3
+                3:5
             ]
         )
 
@@ -88,9 +98,13 @@ class SimICsToFullAgentTrajectorySamples:
             ),
             requires_grad=False
         )
+        try:
+            self.data = self.data[:,:7]
+        except:
+            pass
 
-        self.step_indices = np.unique(self.data[:,6])
-        self.agents = np.unique(self.data[:,0])
+        self.step_indices = np.unique(self.data[:,0])
+        self.agents = np.unique(self.data[:,1])
 
         self.n_steps = len(self.step_indices)
         self.n_agents = len(self.agents)
@@ -111,9 +125,12 @@ class SimICsToFullAgentTrajectorySamples:
         '''
 
         return (
-            self.data[0,:],
+            (   
+                n % self.n_agents,
+                self.data[0:self.n_agents,:],
+            ),
             self.data[
-                np.arange(0, self.n_steps-1, self.n_agents) + n,
-                1:3
+                n+self.n_agents:self.n_steps*self.n_agents:self.n_agents,
+                3:5
             ]
         )

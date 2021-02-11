@@ -4,22 +4,22 @@
 
 
 
-from hts.multi_agent_kinetics import indicators, forces, integrators, experiments, sim, serialize
+from multi_agent_kinetics import indicators, forces, integrators, experiments, sim, serialize
 import numpy as np
 import datetime as dt
 import math, random
 from multiprocessing import Pool
 
 
-SIM_COUNT = 1
+SIM_COUNT = 10
 
 
 base_params = {
-    'timestep': 0.01,
-    'size': 8, # rename to initialization_radius
+    'timestep': 0.001,
+    'size': 3, # rename to initialization_radius
     'n_agents': 3,
-    'n_timesteps': 10000,
-    'min_dist': 2, # rename for clarity
+    'n_timesteps': 100,
+    'min_dist': 1.2, # rename for clarity
     'init_speed': 0
 }
 
