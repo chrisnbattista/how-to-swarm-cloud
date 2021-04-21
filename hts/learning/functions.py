@@ -3,9 +3,9 @@
 
 
 
-
+import numpy as np
 import torch
-from multi_agent_kinetics import experiments, forces, sim, worlds, indicators
+from multi_agent_kinetics import experiments, forces, sim, worlds, indicators, viz
 import hts.learning.tb_logging
 
 
@@ -20,7 +20,7 @@ class PhysicsForwardRun (torch.autograd.Function):
     '''
 
     @staticmethod
-    def forward(ctx, agent, initial_state, params={}, sigma=0, epsilon=0):
+    def forward(ctx, agent, initial_state, params={}, sigma=torch.Tensor([0]), epsilon=torch.Tensor([0])):
         '''
         '''
 
@@ -48,16 +48,17 @@ class PhysicsForwardRun (torch.autograd.Function):
 
         # Run forward certain number of steps and return all trajectories
         world.advance_state(full_params['n_timesteps']-1)
+        ##viz.trace_trajectories(world, *viz.set_up_figure())
         ctx.history = world.get_history().copy()
         return torch.Tensor(world.get_history()[agent+params['n_agents']::params['n_agents'],3:5])
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, *grad_output):
         '''
         Does finite difference with two terms to find derivative value for each parameter by rerunning sim.
         '''
 
-        d = 0.1
+        d = 1
         d_params = {}
 
         for p in ['sigma', 'epsilon']:
@@ -65,29 +66,43 @@ class PhysicsForwardRun (torch.autograd.Function):
             plus_params = {**ctx.full_params, **{
                 p: ctx.full_params[p] + d
             }}
+            learned_plus_function = lambda world: forces.pairwise_world_lennard_jones_force(world, plus_params['epsilon'], plus_params['sigma'])
 
             minus_params = {**ctx.full_params, **{
                 p: ctx.full_params[p] + d
             }}
+            learned_minus_function = lambda world: forces.pairwise_world_lennard_jones_force(world, minus_params['epsilon'], minus_params['sigma'])
             
             plus_world = worlds.World(
                 initial_state=ctx.initial_state,
+                forces=[learned_plus_function],
                 **plus_params
             )
-            plus_world.advance_state(plus_params['n_steps'])
+            plus_world.advance_state(plus_params['n_timesteps']-1)
             plus_d_trajs = plus_world.get_history()
 
             minus_world = worlds.World(
                 initial_state=ctx.initial_state,
+                forces=[learned_minus_function],
                 **minus_params
             )
-            minus_world.advance_state(minus_params['n_steps'])
+            minus_world.advance_state(minus_params['n_timesteps']-1)
             minus_d_trajs = minus_world.get_history()
 
-            plus_d_cost = indicators.mse_trajectories(ctx.history, plus_d_trajs, ctx.full_params['n_particles'])
-            minus_d_cost = indicators.mse_trajectories(ctx.history, minus_d_trajs, ctx.full_params['n_particles'])
+            print(plus_d_trajs)
 
-            d_params[p] = (plus_d_cost - minus_d_cost)
+            viz.trace_predicted_vs_real_trajectories(ctx.history, plus_d_trajs, '', *viz.set_up_figure())
+
+            plus_d_cost = indicators.mse_trajectories(ctx.history, plus_d_trajs, ctx.full_params['n_agents'])
+            minus_d_cost = indicators.mse_trajectories(ctx.history, minus_d_trajs, ctx.full_params['n_agents'])
+
+            d_params[p] = torch.Tensor([plus_d_cost - minus_d_cost])
+
+            print(plus_d_cost)
+            print(minus_d_cost)
+        
+        ##print(d_params['sigma'])
+        ##print(d_params['epsilon'])
         
         return None, None, None, d_params['sigma'], d_params['epsilon']
 
@@ -148,7 +163,7 @@ class PhysicsStep (torch.autograd.Function, PhysicsEngine):
         
         # Downselect to requested agent
         state = torch.tensor(next_state[agent][3:5], requires_grad=True)
-        ctx.predicted_state = state
+        ctx.predicted_state = state.float().clone().detach()
 
         return state
     
@@ -178,9 +193,9 @@ class PhysicsStep (torch.autograd.Function, PhysicsEngine):
                 # does this once in each direction +/- (via loop above), dividing each by the delta
                 # accumulates them in the appropriate diff index to get numerical derivative
 
-                different_state = super().time_step(ctx.last_state, ctx.params, p['sigma'], p['epsilon'])
+                different_state = torch.tensor(PhysicsEngine.time_step(ctx.last_state, ctx.params, p['sigma'], p['epsilon']))
 
-                diffs[i] += (different_state[ctx.agent][1:3] - ctx.predicted_state) / d
+                diffs[i] += (different_state[ctx.agent][3:5] - ctx.predicted_state) / d
 
         ##tb_logging.writer.add_scalar("Average error", diffs[0].mean(), tb_logging.epoch)
         return None, None, None, diffs[0], diffs[1]

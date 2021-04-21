@@ -22,6 +22,7 @@ sklearn
 threadpoolctl
 toml
 torch
+torchviz
 tensorboard
 tqdm
 typed-ast

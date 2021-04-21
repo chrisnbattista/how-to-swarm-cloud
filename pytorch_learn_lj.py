@@ -8,14 +8,19 @@ import numpy as np
 import datetime as dt
 import math, random, os, glob
 
+from tqdm import tqdm
+
 import torch
 from torch.utils.tensorboard import SummaryWriter
+
+from torchviz import make_dot
 import matplotlib.pyplot as plt
 
 from multi_agent_kinetics import indicators, forces, integrators, experiments, sim, viz, serialize
 from hts.learning import models, data_loaders, tb_logging
 
-
+torch.autograd.set_detect_anomaly(True)
+torch.set_default_dtype(torch.float)
 
 ## Get data
 path = random.choice(
@@ -29,11 +34,14 @@ print(f"Choosing world {path}")
 
 choice = 'single step'
 
-if input("Enter something if you want to use single step cost function >"):
+if input("Enter something if you want to use single step learning >"):
     data = data_loaders.SimStateToOneAgentStepSamples(path)
-else:
+elif input("Enter something if you want to use full trajectory learning >"):
     choice = 'forward run'
     data = data_loaders.SimICsToFullAgentTrajectorySamples(path)
+else:
+    choice = 'neural net'
+    data = data_loaders.SimStateToSimState(path)
 
 loaded_params = serialize.load_world(path)[1]
 
@@ -50,10 +58,13 @@ world_params = {**loaded_params, \
 }
 
 # Define initial guesses
+random.seed()
 learned_params = {
-    'epsilon': 2,
-    'sigma': 25
+    'epsilon': float(random.randint(10,40)),
+    'sigma': float(random.randint(0,5))
 }
+print(f"\ninitial guesses\nepsilon: {learned_params['epsilon']}\nsigma: {learned_params['sigma']}")
+world_params = {**world_params, **learned_params}
 
 # Define learning hyperparameters
 hyperparams = {
@@ -64,8 +75,14 @@ hyperparams = {
 # Create model object
 if choice == 'single step':
     model = models.PhysicsSingleStepModel(**world_params)
-else:
+elif choice == 'forward run':
     model = models.PhysicsForwardRunModel(**world_params)
+else:
+    model = model = torch.nn.Sequential(
+                        torch.nn.Linear(12, 12),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(12, 6),
+            ).float()
 
 
 ## Import loss function
@@ -92,33 +109,41 @@ tb_logging.writer = SummaryWriter()
 
 if not input("Please enter any input to skip learning >"):
 
-    for i in range(int(len(data))): # step through iterations
+    # Gradient Descent routine to learn params
+
+    for i in tqdm(range(int(len(data)))): # step through iterations
         
         tb_logging.epoch = i # synchronize epoch across functions
 
         # define x and y from state pairs
         x, y = data[i]
-        x.requires_grad = True
+        y = y.float()
+        ##x[1].requires_grad = True
+
+        print(x)
 
         # Get model predictions
-        y_pred = model(i % data.n_agents, x)
+        if choice == 'neural net':
+            y_pred = model(x.float())
+        else:
+            y_pred = model(*x)
 
         # Compute loss
+        print(y_pred)
+        print(y)
         loss = criterion(y_pred, y)
+        
+        # Plot loss computation graph
+        if i ==0: make_dot(loss).render("loss_graph")
 
         # Log loss and current parameters
         tb_logging.writer.add_scalar("Loss/train", loss, i)
         tb_logging.writer.add_scalar("Parameter/sigma", model.sigma.data, i)
         tb_logging.writer.add_scalar("Parameter/epsilon", model.epsilon.data, i)
 
-        if i % int(len(data)/10) == 0:
-            print("#", flush=True, end='')
-
         #print(f"Loss: {loss.data}")
         #print(f"Sigma: {model.sigma.data}")
         #print(f"Epsilon: {model.epsilon.data}")
-
-        ##torchviz.make_dot(loss).render("graph", format="png")
 
         optimizer.zero_grad()
         loss.backward()
@@ -126,12 +151,17 @@ if not input("Please enter any input to skip learning >"):
 
     tb_logging.writer.flush()
     tb_logging.writer.close()
+    print(f"\nFinal values:\nSigma: {model.sigma.data}\nEpsilon: {model.epsilon.data}")
+    input()
 
 else:
+
+    # Visualization routine to show cost landscape
+
     viz.generate_cost_plot(model, data, criterion,
                                     {
-                                        'sigma':np.linspace(0, 2, 30),
-                                        'epsilon':np.linspace(20, 30, 30)
+                                        'sigma':np.linspace(0, 2, 11),
+                                        'epsilon':np.linspace(20, 30, 11)
                                     },
                                     range(0,len(data), 1)
     )
