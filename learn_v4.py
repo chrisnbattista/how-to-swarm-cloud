@@ -11,8 +11,11 @@ from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
+## Select dataset
+choice = input("which dataset>").strip()
+
 ## Get data
-paths = glob.glob('./data/two_particle/*/*.csv')
+paths = glob.glob(f'./data/two_particle/{choice}/*.csv')
 dataset = []
 print('Loading {} data files...'.format(len(paths)))
 for p in tqdm(range(len(paths))):
