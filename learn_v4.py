@@ -1,8 +1,15 @@
 import numpy as np
 import pandas as pd
-import random, glob
+import random, glob, warnings
 from multi_agent_kinetics import serialize
 from tqdm import tqdm
+import sklearn
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.model_selection import train_test_split
+from sklearn import datasets, linear_model
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 
 ## Get data
 paths = glob.glob('./data/two_particle/*/*.csv')
@@ -51,4 +58,55 @@ data['speed_2'] = np.sqrt(
                 + data['x_dot_22']**2
 )
 data['phi'] = data['speed_1'] / data['iad']
-print(data)
+msk = np.random.rand(len(data)) < 0.8
+train = data[msk]
+test = data[~msk]
+
+errors = []
+
+## Train linear model
+#poly_transformer = PolynomialFeatures(degree=3)
+regr = linear_model.LinearRegression()
+regr.fit(train['iad'].values.reshape(-1, 1), train['phi'])
+
+## Test linear model
+y_pred = regr.predict(test['iad'].values.reshape(-1, 1))
+phi = np.array(test['phi'])
+error = np.divide(
+    np.subtract(y_pred, phi),
+    phi
+)
+error = error[np.isfinite(error)]
+errors.append(np.abs(np.average(error)))
+print(f'---\nLinear model\nMean error: {np.abs(np.average(error)) * 100:.2f}%')
+
+with warnings.catch_warnings():
+
+    ## Try multiple degrees of polynomial models
+    for degree in range(2, 10):
+
+        ## Train polynomial model
+        poly_transformer = PolynomialFeatures(degree=degree)
+        transformed_features = poly_transformer.fit_transform(train['iad'].values.reshape(-1, 1))
+        regr2 = linear_model.LinearRegression()
+        regr2.fit(transformed_features, train['phi'])
+
+        ## Test polynomial model
+        transformed_features_test = poly_transformer.fit_transform(test['iad'].values.reshape(-1, 1))
+        y_pred2 = regr2.predict(transformed_features_test)
+        phi = np.array(test['phi'])
+        error2 = np.divide(
+            np.subtract(y_pred2, phi),
+            phi
+        )
+        error2 = error2[np.isfinite(error2)]
+        errors.append(np.abs(np.average(error2)))
+        print(f'---\nPolynomial (d={degree}) model\nMean error: {np.abs(np.average(error2)) * 100:.2f}%')
+
+## Plot error
+plt.plot(range(1, 10), [e*100 for e in errors])
+plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter())
+plt.title('Naive fits of kernel function')
+plt.xlabel('Degree of fit')
+plt.ylabel('Percentage Error')
+plt.show()
