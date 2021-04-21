@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import random, glob, warnings
+import random, glob, warnings, sys
 from multi_agent_kinetics import serialize
 from tqdm import tqdm
 import sklearn
@@ -10,12 +10,16 @@ from sklearn import datasets, linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+from sklearn.neural_network import MLPRegressor
 
 ## Select dataset
-choice = input("which dataset>").strip()
+data_choice = input("which dataset>").strip()
+
+## Select model type
+model_choice = input("NN?>").strip()
 
 ## Get data
-paths = glob.glob(f'./data/two_particle/{choice}/*.csv')
+paths = glob.glob(f'./data/two_particle/{data_choice}/*.csv')
 dataset = []
 print('Loading {} data files...'.format(len(paths)))
 for p in tqdm(range(len(paths))):
@@ -67,23 +71,40 @@ test = data[~msk]
 
 errors = []
 
-## Train linear model
-#poly_transformer = PolynomialFeatures(degree=3)
-regr = linear_model.LinearRegression()
-regr.fit(train['iad'].values.reshape(-1, 1), train['phi'])
-
-## Test linear model
-y_pred = regr.predict(test['iad'].values.reshape(-1, 1))
-phi = np.array(test['phi'])
-error = np.divide(
-    np.subtract(y_pred, phi),
-    phi
-)
-error = error[np.isfinite(error)]
-errors.append(np.abs(np.average(error)))
-print(f'---\nLinear model\nMean error: {np.abs(np.average(error)) * 100:.2f}%')
-
 with warnings.catch_warnings():
+
+    if model_choice:
+        ## Train NN model
+        print("Training Multi-Layer Perceptron...")
+        perceptron = MLPRegressor(random_state=1, max_iter=500).fit(train['iad'].values.reshape(-1, 1), train['phi'])
+        
+        ## Test NN model
+        y_pred3 = perceptron.predict(test['iad'].values.reshape(-1, 1))
+        phi = np.array(test['phi'])
+        error3 = np.divide(
+            np.subtract(y_pred3, phi),
+            phi
+        )
+        error3 = error3[np.isfinite(error3)]
+        print(f'---\nMulti-Layer Perceptron model\nMean error: {np.abs(np.average(error3)) * 100:.2f}%')
+
+    ## Train linear model
+    #poly_transformer = PolynomialFeatures(degree=3)
+    regr = linear_model.LinearRegression()
+    regr.fit(train['iad'].values.reshape(-1, 1), train['phi'])
+
+    ## Test linear model
+    y_pred = regr.predict(test['iad'].values.reshape(-1, 1))
+    phi = np.array(test['phi'])
+    error = np.divide(
+        np.subtract(y_pred, phi),
+        phi
+    )
+    error = error[np.isfinite(error)]
+    errors.append(np.abs(np.average(error)))
+    print(f'---\nLinear model\nMean error: {np.abs(np.average(error)) * 100:.2f}%')
+
+
 
     ## Try multiple degrees of polynomial models
     for degree in range(2, 10):
@@ -106,10 +127,19 @@ with warnings.catch_warnings():
         errors.append(np.abs(np.average(error2)))
         print(f'---\nPolynomial (d={degree}) model\nMean error: {np.abs(np.average(error2)) * 100:.2f}%')
 
-## Plot error
-plt.plot(range(1, 10), [e*100 for e in errors])
-plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter())
-plt.title('Naive fits of kernel function')
-plt.xlabel('Degree of fit')
-plt.ylabel('Percentage Error')
-plt.show()
+    ## Plot error for linear models
+    fig = plt.figure()
+    plt.plot(range(1, 10), [e*100 for e in errors])
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter())
+    plt.title('Percentage error versus degree of model')
+    fig.canvas.set_window_title('Fitting ML models to interaction kernels')
+    plt.xlabel('Degree of fit')
+    plt.ylabel('Percentage Error')
+
+    ## Plot error for NN model
+    if model_choice:
+        plt.axhline(y=np.abs(np.average(error3))*100, color='b', linestyle='dotted')
+        plt.title('Percentage error versus degree of model\nDotted blue line = Multi-Layer Perceptron error')
+    
+    fig.tight_layout()
+    plt.show()
