@@ -76,7 +76,13 @@ with warnings.catch_warnings():
     if model_choice:
         ## Train NN model
         print("Training Multi-Layer Perceptron...")
-        perceptron = MLPRegressor(random_state=1, max_iter=500).fit(train['iad'].values.reshape(-1, 1), train['phi'])
+        perceptron = MLPRegressor(
+            random_state=1,
+            max_iter=300,
+            hidden_layer_sizes=(50, 50), 
+            activation='tanh',
+            solver='lbfgs'
+        ).fit(train['iad'].values.reshape(-1, 1), train['phi'])
         
         ## Test NN model
         y_pred3 = perceptron.predict(test['iad'].values.reshape(-1, 1))

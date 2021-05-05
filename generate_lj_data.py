@@ -17,7 +17,7 @@ n = 3
 path = ''
 if input("two_particles?>"):
     n = 2
-    path = '/two_particle'
+    path = '/two_particle_pt'
 
 
 

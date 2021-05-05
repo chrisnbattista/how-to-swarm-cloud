@@ -33,10 +33,14 @@ class PhysicsForwardRun (torch.autograd.Function):
         ctx.full_params = full_params
 
         # Function construction
-        learned_function = lambda world: forces.pairwise_world_lennard_jones_force(world, **{ \
-            'epsilon': epsilon.data,
-            'sigma': sigma.data
-        })
+        learned_function = lambda world, context: forces.pairwise_world_lennard_jones_force(
+            world,
+            **{
+                'epsilon': epsilon.data,
+                'sigma': sigma.data
+            },
+            context=context
+        )
 
         ##print(f'{epsilon.data} {sigma.data}')
 
@@ -66,12 +70,12 @@ class PhysicsForwardRun (torch.autograd.Function):
             plus_params = {**ctx.full_params, **{
                 p: ctx.full_params[p] + d
             }}
-            learned_plus_function = lambda world: forces.pairwise_world_lennard_jones_force(world, plus_params['epsilon'], plus_params['sigma'])
+            learned_plus_function = lambda world, context: forces.pairwise_world_lennard_jones_force(world, plus_params['epsilon'], plus_params['sigma'])
 
             minus_params = {**ctx.full_params, **{
                 p: ctx.full_params[p] + d
             }}
-            learned_minus_function = lambda world: forces.pairwise_world_lennard_jones_force(world, minus_params['epsilon'], minus_params['sigma'])
+            learned_minus_function = lambda world, context: forces.pairwise_world_lennard_jones_force(world, minus_params['epsilon'], minus_params['sigma'])
             
             plus_world = worlds.World(
                 initial_state=ctx.initial_state,
@@ -121,10 +125,14 @@ class PhysicsEngine:
         '''
 
         # Function construction
-        learned_function = lambda world: forces.pairwise_world_lennard_jones_force(world, **{ \
-            'epsilon': epsilon.data,
-            'sigma': sigma.data
-        })
+        learned_function = lambda world, context: forces.pairwise_world_lennard_jones_force(
+            world,
+            **{ \
+                'epsilon': epsilon.data,
+                'sigma': sigma.data
+            },
+            context=context
+        )
 
         # Setup
         args = {**params, **{'forces':[learned_function]}}

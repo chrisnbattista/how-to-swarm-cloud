@@ -26,7 +26,7 @@ torch.set_default_dtype(torch.float)
 path = random.choice(
     serialize.list_worlds(
         random.choice(
-            glob.glob('./data/*/')
+            glob.glob('./data/two_particle_pt/*/')
         )
     )
 )
