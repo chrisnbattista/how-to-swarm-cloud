@@ -7,7 +7,8 @@ A project exploring the potential of machine learning to uncover the fundamental
 - Run pip install -r requirements.txt
 
 ## How to run
-- python lj_test.py
+- python generate_lj_data.py
+- python learn_lj_parameters.py
 
 ## Notes on prior work by others
 - Prior work on particle simulation has been done and folded into the PyPI at https://coulomb.umontpellier.fr/perso/daniele.coslovich/atooms/ - may be worth forking this codebase / contributing any particle sim learnings back.

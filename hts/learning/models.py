@@ -4,9 +4,17 @@ from multi_agent_kinetics import experiments, forces
 from hts.learning import functions
 import torch.nn.functional as F
 
+class PhiModel(nn.Module):
+    def __init__(self):
+        super(PhiModel, self).__init__()
 
+        self.fc1 = nn.Linear(1, 50)
+        self.fc2 = nn.Linear(50, 1)
 
-
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return x
 
 class KernelLearner(nn.Module):
 

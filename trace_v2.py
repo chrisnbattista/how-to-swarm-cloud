@@ -6,7 +6,9 @@ import pandas as pd
 data_choice = input("which dataset>").strip()
 
 ## Get data
-path = random.choice(glob.glob(f'./data/two_particle/{data_choice}/*.csv'))
+path = random.choice(
+    glob.glob(f'./data/two_particle/{data_choice}/*.csv')
+)
 print('Loading random data file from dataset...')
 data = pd.read_csv(
                 path,

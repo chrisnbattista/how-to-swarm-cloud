@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
 import random, glob, warnings, sys
 from multi_agent_kinetics import serialize
 from tqdm import tqdm
@@ -11,12 +13,13 @@ from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from sklearn.neural_network import MLPRegressor
+from hts.learning import models
 
 ## Select dataset
 data_choice = input("which dataset>").strip()
 
 ## Select model type
-model_choice = input("NN?>").strip()
+model_choice = input("([lr], mlp or nn)?>").strip()
 
 ## Get data
 paths = glob.glob(f'./data/two_particle/{data_choice}/*.csv')
@@ -73,8 +76,8 @@ errors = []
 
 with warnings.catch_warnings():
 
-    if model_choice:
-        ## Train NN model
+    if model_choice == 'mlp':
+        ## Train MLP model
         print("Training Multi-Layer Perceptron...")
         perceptron = MLPRegressor(
             random_state=1,
@@ -84,7 +87,7 @@ with warnings.catch_warnings():
             solver='lbfgs'
         ).fit(train['iad'].values.reshape(-1, 1), train['phi'])
         
-        ## Test NN model
+        ## Test MLP model
         y_pred3 = perceptron.predict(test['iad'].values.reshape(-1, 1))
         phi = np.array(test['phi'])
         error3 = np.divide(
@@ -93,6 +96,31 @@ with warnings.catch_warnings():
         )
         error3 = error3[np.isfinite(error3)]
         print(f'---\nMulti-Layer Perceptron model\nMean error: {np.abs(np.average(error3)) * 100:.2f}%')
+    
+    elif model_choice == 'nn':
+        ## Train custom NN model
+        model = models.PhiModel()
+        loss_fn = nn.MSELoss()
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+        for i in range(train.shape[0]):
+            X = torch.tensor(train['iad'][i])
+            y = torch.tensor(train['phi'][i])
+            print(X)
+            pred = model(X)
+            loss = loss_fn(pred, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        
+        ## Test custom NN model
+        y_pred4 = model(torch.tensor(test['iad']))
+        phi = np.array(test['phi'])
+        error4 = np.divide(
+            np.subtract(y_pred4, phi),
+            phi
+        )
+        error4 = error4[np.isfinite(error4)]
+        print(f'---\nNN model\nMean error: {np.abs(np.average(error4)) * 100:.2f}%')
 
     ## Train linear model
     #poly_transformer = PolynomialFeatures(degree=3)
@@ -109,8 +137,6 @@ with warnings.catch_warnings():
     error = error[np.isfinite(error)]
     errors.append(np.abs(np.average(error)))
     print(f'---\nLinear model\nMean error: {np.abs(np.average(error)) * 100:.2f}%')
-
-
 
     ## Try multiple degrees of polynomial models
     for degree in range(2, 10):
