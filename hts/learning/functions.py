@@ -1,17 +1,7 @@
-
-
-
-
-
 import numpy as np
 import torch
 from multi_agent_kinetics import experiments, forces, sim, worlds, indicators, viz
 import hts.learning.tb_logging
-
-
-
-
-
 
 class PhysicsForwardRun (torch.autograd.Function):
     '''

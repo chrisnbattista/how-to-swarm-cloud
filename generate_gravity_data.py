@@ -1,6 +1,6 @@
 # Generate a ton of data files for use in learning the gravity function
 
-from multi_agent_kinetics import indicators, forces, integrators, experiments, sim, serialize
+from multi_agent_kinetics import indicators, forces, integrators, experiments, sim, serialize, potentials
 import numpy as np
 import datetime as dt
 import math, random
@@ -18,7 +18,7 @@ base_params = {
     'timestep': 0.1,
     'size': 30, # rename to initialization_radius
     'n_agents': n,
-    'n_timesteps': 10000,
+    'n_timesteps': 1000,
     'min_dist': 12, # rename for clarity
     'init_speed': 0,
     'mass': 10**(9)
@@ -35,7 +35,9 @@ def run_sim_and_write(seed):
         seed,
         forces=[
             lambda world, context: forces.newtons_law_of_gravitation(world, true_params['G'], context)
-        ]
+        ],
+        indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
+        indicator_schema=['Hamiltonian']
     )
     serialize.save_world(world, './data'+path, true_params_aug, seed)
 
