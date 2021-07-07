@@ -1,15 +1,7 @@
-
-
-
-
-
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 from multi_agent_kinetics import viz, serialize
-
-
 
 filepath = sys.argv[1]
 world = serialize.load_world(filepath)[0]
