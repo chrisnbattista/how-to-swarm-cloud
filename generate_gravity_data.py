@@ -9,18 +9,19 @@ from tqdm import tqdm
 
 np.seterr(all="ignore")
 
-SIM_COUNT = 10
+SIM_COUNT = 100
 
+n = 3
 path = '/two_particle/gravity'
 
 base_params = {
-    'timestep': 10000,
-    'size': 2*149.6*10**9, # rename to initialization_radius
-    'n_agents': 2,
-    'n_timesteps': 100000,
-    'min_dist': 0.5*149.6*10**9, # rename for clarity
-    'init_speed': 30000,
-    'mass': [5.972*10**(24), 1.989*10**30]
+    'timestep': 0.1,
+    'size': 30, # rename to initialization_radius
+    'n_agents': n,
+    'n_timesteps': 1000,
+    'min_dist': 12, # rename for clarity
+    'init_speed': 0,
+    'mass': 10**(9)
 }
 
 true_params = {
@@ -35,8 +36,8 @@ def run_sim_and_write(seed):
         forces=[
             lambda world, context: forces.newtons_law_of_gravitation(world, true_params['G'], context)
         ],
-        ##indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
-        ##indicator_schema=['Hamiltonian']
+        indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
+        indicator_schema=['Hamiltonian']
     )
     serialize.save_world(world, './data'+path, true_params_aug, seed)
 
