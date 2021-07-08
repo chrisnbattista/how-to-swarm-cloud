@@ -14,14 +14,14 @@ SIM_COUNT = 100
 decay = input("Decay [y]/[N] >")
 if decay == 'y':
     path = '/two_particle/earth-moon-decay'
-    decay_force = [lambda w,c: forces.viscous_damping_force(world=w, c=10**8, context=c)]
+    decay_force = [lambda w,c: forces.viscous_damping_force(world=w, c=float(10**15), context=c)]
 else:
     path = '/two_particle/earth-moon'
     decay_force = []
 
 base_params = {
     'timestep': 2.4*10**6 / 10000, # 1/1000 of orbital period
-    'n_timesteps': 10000, # 1 full period
+    'n_timesteps': 10000, # 1 period
     'separation': 384.4*10**6, # earth-moon distance
     'small_m': 7.348*10**22, # moon mass
     'large_m': 5.972*10**24, # earth mass,
