@@ -1,4 +1,5 @@
-import random
+import random, datetime
+import pandas
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -12,21 +13,22 @@ from multi_agent_kinetics import serialize, worlds, forces, potentials, indicato
 torch.autograd.set_detect_anomaly(True)
 
 ## Split data
-filepaths = serialize.list_worlds("./data/two_particle/earth-moon")
+filepaths = serialize.list_worlds("./data/two_particle/scaled-gravity")
 print(f'Number of training files: {len(filepaths)}')
 train_filepaths, test_filepaths = train_test_split(filepaths, test_size=0.2)
 
 ## Define model
 class GravityNet(nn.Module):
-    def __init__(self):
+    def __init__(self, G_guess):
         super().__init__()
-        self.G = torch.nn.Parameter(torch.tensor(6.674*(10**(-11))))
-        self.delta = 10**(-12)
+        self.G = torch.nn.Parameter(torch.tensor(G_guess))
+        self.delta = 0.01
         self.l1 = nn.L1Loss()
     
-    def run_sim(self, input, steps, G):
+    def run_sim(self, X, steps, G):
+        ##input(f'initial state: {X[:,:7]}')
         temp_world = worlds.World(
-            initial_state=input[:,:7],
+            initial_state=X[:,:7],
             forces=[
                 lambda world, context: forces.newtons_law_of_gravitation(world, G, context)
             ],
@@ -35,15 +37,16 @@ class GravityNet(nn.Module):
                 lambda w: potentials.gravitational_potential_energy(w, G=G)
                 ],
             indicator_schema=['Hamiltonian', 'GPE'],
-            n_timesteps=steps
+            n_timesteps=steps,
+            timestep=0.02
         )
         temp_world.advance_state(steps-1)
         return temp_world.get_full_history_with_indicators()
     
-    def forward(self, input, steps):
-        self.last_input = input
+    def forward(self, X, steps):
+        self.last_X = X
         self.last_steps = steps
-        return self.run_sim(input, steps, self.G)
+        return self.run_sim(X, steps, self.G)
 
     def compute_grad(self, actual):
         ## Prepare indexes
@@ -51,30 +54,37 @@ class GravityNet(nn.Module):
         ham = slice(len(worlds.schemas['2d']), len(worlds.schemas['2d'])+1)
 
         ## Scaling factor for Hamiltonian regularization
-        ham_factor = 10e-18
+        ham_factor = 0.0001
 
+        ## TODO: note in paper that velocity must be measurable for this technique to work (part of state vector) - difficult in practice
         ## Compute loss for slightly perturbed G values
-        plus_G_history = self.run_sim(self.last_input, self.last_steps, self.G+self.delta)
+        plus_G_history = self.run_sim(self.last_X, self.last_steps, self.G+self.delta)
+        # TODO add vel term
+        # be explicit about state vector
+        # TODO: don't reference true Hamiltonian after IC
         plus_G_loss = self.l1(actual[pos], plus_G_history[pos]) + self.l1(actual[ham], plus_G_history[ham]) * ham_factor
-        minus_G_history = self.run_sim(self.last_input, self.last_steps, self.G-self.delta)
+        minus_G_history = self.run_sim(self.last_X, self.last_steps, self.G-self.delta)
         minus_G_loss = self.l1(actual[pos], minus_G_history[pos]) + self.l1(actual[ham], plus_G_history[ham]) * ham_factor
 
         ## Calculate the gradient numerically based on the above values of G
         self.G.grad = Variable(
-            torch.clamp(
-                torch.tensor(
-                    (plus_G_loss - minus_G_loss) / (self.delta*2),
-                    requires_grad=False
-                ).type(torch.FloatTensor),
-                min=-10**(-12),
-                max=10**(-12)
-            )
+            torch.tensor(
+                (plus_G_loss - minus_G_loss) / (self.delta*2),
+                requires_grad=False
+            ).type(torch.FloatTensor)
         )
 
-model = GravityNet()
+model = GravityNet(float(1.2))
 
 ## Define optimizer
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
+hyperparams = {
+    'lr': 1e-2,
+    'p':0.1
+}
+optimizer = torch.optim.SGD(
+    model.parameters(),
+    lr=hyperparams['lr'],
+    momentum=hyperparams['p'])
 # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 ## Define indexes (2D case)
@@ -86,48 +96,66 @@ ham = slice(len(worlds.schemas['2d']), len(worlds.schemas['2d'])+1)
 losses_over_time = {
     'pos':[],
     'vel':[],
-    'ham':[]
+    'ham':[],
+    'guess':[]
 }
 
-## Train model with data
-for fp in train_filepaths:
-    print(f'Training on {fp}')
+try:
 
-    ## Load data
-    world, params = serialize.load_world(fp)
-    history = world.get_full_history_with_indicators()
+    ## Train model with data
+    for fp in train_filepaths:
+        print(f'Training on {fp}')
 
-    ## Define loss functions and initialize loss values
-    pos_reconstruction_loss_fn = nn.L1Loss()
-    vel_reconstruction_loss_fn = nn.L1Loss()
-    hamiltonian_loss_fn = nn.L1Loss()
-    steps = int(history.shape[0] / world.n_agents)
+        ## Load data
+        world, params = serialize.load_world(fp)
+        history = world.get_full_history_with_indicators()
 
-    ## Run sim
-    prediction = model(history[0:world.n_agents,:], steps)
+        ## Define loss functions and initialize loss values
+        pos_reconstruction_loss_fn = nn.L1Loss()
+        vel_reconstruction_loss_fn = nn.L1Loss()
+        hamiltonian_loss_fn = nn.L1Loss()
+        steps = int(history.shape[0] / world.n_agents)
 
-    ## Compute loss
-    pos_reconstruction_loss = pos_reconstruction_loss_fn(prediction[:,pos], history[:,pos])
-    vel_reconstruction_loss = vel_reconstruction_loss_fn(prediction[:,vel], history[:,vel])
-    hamiltonian_loss = hamiltonian_loss_fn(prediction[0,ham], history[0,ham])
-    ##d_ham_dt_loss += (prediction[0,ham] - last_ham)/world.timestep_length
+        ## Define input and expected output
+        X = history[0:world.n_agents,:]
+        y = history
 
-    ## Compute G gradient
-    model.zero_grad()
-    model.compute_grad(history)
+        ## Run sim
+        y_pred = model(X, steps)
 
-    ## Adjust parameters: learning step
-    optimizer.step()
+        ##input(f"frame 0 of y_pred: {y_pred[0,:]}")
 
-    ## Print and record progress
-    print(f'pos: {pos_reconstruction_loss}\tvel: {vel_reconstruction_loss}')
-    print(f'ham: {hamiltonian_loss}')
-    losses_over_time['pos'].append(pos_reconstruction_loss)
-    losses_over_time['vel'].append(vel_reconstruction_loss)
-    losses_over_time['ham'].append(hamiltonian_loss)
+        ## Compute loss
+        pos_reconstruction_loss = pos_reconstruction_loss_fn(y_pred[:,pos], y[:,pos])
+        vel_reconstruction_loss = vel_reconstruction_loss_fn(y_pred[:,vel], y[:,vel])
+        hamiltonian_loss = hamiltonian_loss_fn(y_pred[0,ham], history[0,ham]) # always compare against initial hamiltonian
+        ##d_ham_dt_loss += (prediction[0,ham] - last_ham)/world.timestep_length
 
-## Plot results
-plt.plot(losses_over_time['pos'])
-plt.plot(losses_over_time['vel'])
-plt.plot(losses_over_time['ham'])
-plt.show()
+        ## Compute G gradient
+        model.zero_grad()
+        model.compute_grad(history)
+
+        ## Adjust parameters: learning step
+        optimizer.step()
+
+        ## Print and record progress
+        print(f'pos L: {pos_reconstruction_loss}\tvel L: {vel_reconstruction_loss}')
+        print(f'ham L: {hamiltonian_loss}')
+        print(f'G guess: {model.G}')
+        losses_over_time['pos'].append(pos_reconstruction_loss.detach().numpy())
+        losses_over_time['vel'].append(vel_reconstruction_loss.detach().numpy())
+        losses_over_time['ham'].append(hamiltonian_loss.detach().numpy())
+        losses_over_time['guess'].append(float(model.G.detach().numpy()))
+
+    ## Plot results
+    plt.plot(losses_over_time['pos'])
+    plt.plot(losses_over_time['vel'])
+    plt.plot(losses_over_time['ham'])
+    plt.show()
+
+except:
+    pass
+
+finally:
+    print("Logging run...")
+    pandas.DataFrame(losses_over_time).to_csv('./data/results/losses'+str(datetime.datetime.now())+".csv")

@@ -9,6 +9,11 @@ from tqdm import tqdm
 
 np.seterr(all="ignore")
 
+## TODO: downsample high fidelity data set
+## TODO: quantify numerical error using optimal/correct solver discrepancy
+## maybe find reference data?
+## TODO: scale down / nondimensionalize using this technique https://archive.siam.org/books/textbooks/MM13Sample.pdf
+
 SIM_COUNT = 100
 
 decay = input("Decay [y]/[N] >")
@@ -19,6 +24,8 @@ else:
     path = '/two_particle/earth-moon'
     decay_force = []
 
+# TODO: compress variable magnitudes into more reasonable range
+# TODO: reduce to dummy test case with many variables = 1, GM ~ 1
 base_params = {
     'timestep': 2.4*10**6 / 10000, # 1/1000 of orbital period
     'n_timesteps': 10000, # 1 period
