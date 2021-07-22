@@ -1,4 +1,4 @@
-import random, datetime
+import random, datetime, sys
 import pandas
 import torch
 import torch.nn as nn
@@ -9,6 +9,8 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from multi_agent_kinetics import serialize, worlds, forces, potentials, indicators
+
+G_seed_guess = sys.argv[1]
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -74,7 +76,7 @@ class GravityNet(nn.Module):
             ).type(torch.FloatTensor)
         )
 
-model = GravityNet(float(1.2))
+model = GravityNet(float(G_seed_guess))
 
 ## Define optimizer
 hyperparams = {
