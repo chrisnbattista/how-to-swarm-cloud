@@ -71,10 +71,9 @@ class GravityNet(nn.Module):
         plus_G_history = self.run_sim(self.last_X, self.last_steps, self.G+d)
         # TODO add vel term
         # be explicit about state vector
-        # TODO: don't reference true Hamiltonian after IC
-        plus_G_loss = self.l1(actual[pos], plus_G_history[pos]) + self.l1(actual[ham], plus_G_history[ham]) * ham_factor
+        plus_G_loss = self.l1(actual[pos], plus_G_history[pos]) + self.l1(actual[vel], plus_G_history[vel]) + self.l1(actual[ham], plus_G_history[ham]) * ham_factor
         minus_G_history = self.run_sim(self.last_X, self.last_steps, self.G-d)
-        minus_G_loss = self.l1(actual[pos], minus_G_history[pos]) + self.l1(actual[ham], minus_G_history[ham]) * ham_factor
+        minus_G_loss = self.l1(actual[pos], minus_G_history[pos]) + self.l1(actual[vel], minus_G_history[vel]) + self.l1(actual[ham], minus_G_history[ham]) * ham_factor
 
         ## Calculate the gradient numerically based on the above values of G
         self.G.grad = Variable(
@@ -88,7 +87,7 @@ model = GravityNet(float(G_seed_guess))
 
 ## Define optimizer
 hyperparams = {
-    'lr': 1e-2, # TODO: check behavior changes to understand root causes
+    'lr': 1e-2,
     'p':0.1,
     'segment_count': 100
 }
@@ -115,8 +114,8 @@ try:
 
     ## Train model with data
     fp = random.choice(filepaths)
-    # we train with segments all taken from same trajectory. Don't combine trajectories
-    # very interesting: since we will only be looking at one dynamical system at a time, we can only use data from one to train
+    # we train with segments all taken from same trajectory. We don't combine trajectories
+    # since we will only be looking at one dynamical system at a time, we can only use data from one to train
     # different ICs may operate in different domains in state space
     print(f'Training on {fp}')
 
