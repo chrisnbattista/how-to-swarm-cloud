@@ -16,7 +16,7 @@ def plot_trajectory_bundle(trace_world, sampling_width, sample_count, true_value
         reconstructed_world = worlds.World(
             initial_state=trace_world.get_history()[0:trace_world.n_agents,:7],
             forces=[
-                lambda world, context: forces.newtons_law_of_gravitation(world, G)
+                lambda world, context: forces.newtons_law_of_gravitation(world=world, G=G)
             ],
             n_timesteps=steps,
             timestep=0.02

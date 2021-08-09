@@ -9,7 +9,8 @@ def plot_training_graph(data_df):
             'pos': 'Position Reconstruction Error',
             'vel': 'Velocity Reconstruction Error',
             'ham': 'Hamiltonian Reconstruction Error',
-            'guess': 'Learned G Value',
+            'g': 'Learned G Value',
+            'r': 'Learned r Value',
         },
         inplace=True)
     fig = plt.figure()

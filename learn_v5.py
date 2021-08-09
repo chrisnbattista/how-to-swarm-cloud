@@ -10,6 +10,37 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from multi_agent_kinetics import serialize, worlds, forces, potentials, indicators
 
+# TODO: fix paper
+# maggioni paper or more generic in methodology
+# methodology needs to be more independent of test case. Show dynamical system equation - make it match conventional multiple agent
+# autonomous system - x_dot, j_dot equation - generic way that shows fundamental assumptions
+# don't bring in gravity until results
+# point out immediately that it is autonomous system - no control input
+# not time dependent interaction laws - phi
+# think about answering readers questions as they pop up
+# do we have nonlinearity? what kind of relationships do the variables bear to each other
+
+# TODO: prepare for reviewer questions
+# complications / more complex / less ideal systems
+# use it on something that's not a textbook example
+# noise, disturbances, data error, (not fully characterized systems?)
+
+# TODO: primary assumption of form - address violations of assumption
+# equation form known: what if we give it erroneous equation form?
+# add random noise, characterize data as superposition of analytical system and random processes, modeled as noise
+# the noise should be added to both velocity and position, but post facto (measurement error). we are assuming a pure dynamical system (no unmodeled dynamics)
+# model how noise degrades algo performance (seek maximum threshold)
+# physics are very simplified, note this for reviewers
+# talking about noise, flagging may avoid more reviews
+
+# TODO: tests
+# try with real-world data. Try sun-moon, earth-moon. NASA JPL Horizon data sets.
+# IVs: type of system, amount of noise, optimizer, number of bodies, use of Hamiltonian (perhaps quantify by adjusting weighting)
+# DVs: time to convergence, steady state error
+
+# note: if we wanted to do a partially-stochastic system, we would want to regress the noise parameters. maybe future note. assumption of gaussian distribution might help solve
+
+r_seed_guess = float(1)
 G_seed_guess = float(sys.argv[1])
 if len(sys.argv) > 2:
     optimizer_choice = sys.argv[2]
@@ -50,23 +81,23 @@ def percentage_error(actual, predicted):
 
 ## Define model
 class GravityNet(nn.Module):
-    def __init__(self, G_guess, hyperparams):
+    def __init__(self, G_guess, r_guess, hyperparams):
         super().__init__()
         self.G = torch.nn.Parameter(torch.tensor(G_guess))
+        self.r = torch.nn.Parameter(torch.tensor(r_guess))
         self.hyperparams = hyperparams
         self.delta = 0.01 # TODO: decay this value over time
-        self.l1 = nn.L1Loss()
     
-    def run_sim(self, X, steps, G):
+    def run_sim(self, X, steps, G, r):
         ##input(f'initial state: {X[:,:7]}')
         temp_world = worlds.World(
             initial_state=X[:,:7],
             forces=[
-                lambda world, context: forces.newtons_law_of_gravitation(world, G, context)
+                lambda world, context: forces.newtons_law_of_gravitation(world=world, G=G, r=r.detach().clone(), context=context)
             ],
             indicators=[
-                lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=G)]),
-                lambda w: potentials.gravitational_potential_energy(w, G=G)
+                lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(world=w, G=G)]),
+                lambda w: potentials.gravitational_potential_energy(world=w, G=G)
                 ],
             indicator_schema=['Hamiltonian', 'GPE'],
             n_timesteps=steps,
@@ -78,14 +109,14 @@ class GravityNet(nn.Module):
     def forward(self, X, steps):
         self.last_X = X
         self.last_steps = steps
-        return self.run_sim(X, steps, self.G)
+        return self.run_sim(X=X, steps=steps, G=self.G, r=self.r)
     
     def compute_loss(self, actual, predicted, return_components=False):
         '''Computes loss weighted according to hyperparameters.'''
         baseline = torch.tile(
-            actual[0,:],
+            actual[0,:], ## TODO: Change this to use *GLOBAL* IC instead of segment IC (information leak to the learning algorithm)
             (actual.shape[0], 1)
-        )
+        ) # TODO: Normalize from common point so losses are directly comparable across samples
         baselined_actual = torch.div(actual, baseline)
         baselined_predicted = torch.div(predicted, baseline)
         p_err = self.hyperparams['p_err_weight'] * percentage_error(baselined_actual[pos], baselined_predicted[pos])
@@ -117,28 +148,37 @@ class GravityNet(nn.Module):
         ## Central Difference Theorem
 
         ## Compute loss for slightly perturbed G values
-        plus_G_history = self.run_sim(self.last_X, self.last_steps, self.G+d)
+        plus_G_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G+d, r=self.r)
         plus_G_loss = self.compute_loss(actual, plus_G_history)
-        minus_G_history = self.run_sim(self.last_X, self.last_steps, self.G-d)
+        minus_G_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G-d, r=self.r)
         minus_G_loss = self.compute_loss(actual, minus_G_history)
+
+        ## Compute loss for slightly perturbed r values
+        plus_r_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G, r=self.r+d)
+        plus_r_loss = self.compute_loss(actual, plus_r_history)
+        minus_r_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G, r=self.r-d)
+        minus_r_loss = self.compute_loss(actual, minus_r_history)
 
         ## Calculate the gradient numerically based on the above values of G
         self.G.grad = Variable(
             ((plus_G_loss - minus_G_loss).clone().detach() / (d*2)).type(torch.FloatTensor)
+        )
+        self.r.grad = Variable(
+            ((plus_r_loss - minus_r_loss).clone().detach() / (d*2)).type(torch.FloatTensor)
         )
 
 ## Define optimizer and model
 hyperparams = {
     'lr': 1e-2,
     'p':0.1,
-    'segment_count': 2000,
+    'segment_count': 2000,  
     'accuracy_threshold': 0.001,
     'p_err_weight': 1.0,
     'v_err_weight': 0.5,
     'h_err_weight': 0.1,
     'betas':(0.9, 0.999)
 }
-model = GravityNet(G_seed_guess, hyperparams)
+model = GravityNet(G_guess=G_seed_guess, r_guess=r_seed_guess, hyperparams=hyperparams)
 if optimizer_choice == 'sgd':
     optimizer = torch.optim.SGD(
         model.parameters(),
@@ -146,7 +186,7 @@ if optimizer_choice == 'sgd':
         momentum=hyperparams['p'])
 elif optimizer_choice == 'adam':
     optimizer = torch.optim.Adam(
-        model.parameters(),
+        (model.G, model.r),
         lr=hyperparams['lr'],
         betas=hyperparams['betas'],
         amsgrad=True
@@ -164,7 +204,8 @@ losses_over_time = {
     'pos':[],
     'vel':[],
     'ham':[],
-    'guess':[]
+    'g':[],
+    'r':[]
 }
 
 try:
@@ -180,11 +221,6 @@ try:
     world, params = serialize.load_world(fp)
     history = world.get_full_history_with_indicators()
 
-    ## Define loss functions and initialize loss values
-    pos_reconstruction_loss_fn = nn.L1Loss()
-    vel_reconstruction_loss_fn = nn.L1Loss()
-    hamiltonian_loss_fn = nn.L1Loss()
-
     ## Break the trajectory into distinct segments
     steps = int(history.shape[0] / world.n_agents / hyperparams['segment_count'])
 
@@ -194,6 +230,10 @@ try:
 
         ## Safety condition to stop infinite loop. Epoch limit. Also necessary for regular halting condition
         if halt == True or epoch > 9: break
+
+        # TODO: Fix IID conditions
+        # TODO: Moving window to create segments
+        # TODO: Increase window size to learn r more effectively
 
         ## Loop through all the segments of the trajectory
         for segment_i in range(hyperparams['segment_count']):
@@ -206,7 +246,7 @@ try:
             ## Run sim
             y_pred = model(X, steps)
 
-            ## Compute G gradient
+            ## Compute gradients
             model.zero_grad()
             model.compute_grad(segment_history)
 
@@ -219,10 +259,12 @@ try:
             print(f'pos L: {l_comps["p_err"]}\tvel L: {l_comps["v_err"]}')
             print(f'ham L: {l_comps["h_err"]}')
             print(f'G guess: {model.G}')
+            print(f'r guess: {model.r}')
             losses_over_time['pos'].append(l_comps["p_err"].detach().numpy())
             losses_over_time['vel'].append(l_comps["v_err"].detach().numpy())
             losses_over_time['ham'].append(l_comps["h_err"].detach().numpy())
-            losses_over_time['guess'].append(float(model.G.detach().numpy()))
+            losses_over_time['g'].append(float(model.G.detach().numpy()))
+            losses_over_time['r'].append(float(model.r.detach().numpy()))
 
             ## Halting condition
             if model.compute_loss(y, y_pred) < hyperparams['accuracy_threshold']:

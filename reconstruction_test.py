@@ -26,7 +26,7 @@ X = true_history[0:true_world.n_agents,:]
 reconstructed_world = worlds.World(
         initial_state=X[:,:7],
         forces=[
-            lambda world, context: forces.newtons_law_of_gravitation(world, G_guess, context)
+            lambda world, context: forces.newtons_law_of_gravitation(world=world, G=G_guess, context=context)
         ],
         indicators=[
             lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=G_guess)]),

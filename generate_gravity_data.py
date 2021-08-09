@@ -34,7 +34,7 @@ def run_sim_and_write(seed):
         true_params_aug,
         seed,
         forces=[
-            lambda world, context: forces.newtons_law_of_gravitation(world, true_params['G'], context)
+            lambda world, context: forces.newtons_law_of_gravitation(world=world, G=true_params['G'], context=context)
         ],
         indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
         indicator_schema=['Hamiltonian']

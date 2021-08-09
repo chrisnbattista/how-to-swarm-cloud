@@ -92,7 +92,7 @@ def run_one_monte_carlo_sample(base_params, true_params, initial_guess_params, h
     if sim_force == 'lj':
         true_force = lambda world, context: forces.pairwise_world_lennard_jones_force(world, epsilon=true_params['epsilon'], sigma=true_params['sigma'])
     elif sim_force  == 'gravity':
-        true_force = lambda world, context: forces.newtons_law_of_gravitation(world, true_params['G'], context)
+        true_force = lambda world, context: forces.newtons_law_of_gravitation(world=world, G=true_params['G'], context=context)
     
     ## Reference (true) world
     true_params_aug = {**base_params, **true_params}
@@ -115,7 +115,7 @@ def run_one_monte_carlo_sample(base_params, true_params, initial_guess_params, h
         if sim_force == 'lj':
             test_force = lambda world, context: forces.pairwise_world_lennard_jones_force(world, epsilon=learned_params['epsilon'], sigma=learned_params['sigma'])
         elif sim_force  == 'gravity':
-            test_force = lambda world, context: forces.newtons_law_of_gravitation(world, learned_params['G'], context)
+            test_force = lambda world, context: forces.newtons_law_of_gravitation(world=world, G=learned_params['G'], context=context)
     
         test_world = sim.run_random_circle_sim(
             learned_params_aug,
@@ -140,7 +140,7 @@ def run_one_monte_carlo_sample(base_params, true_params, initial_guess_params, h
             if sim_force == 'lj':
                 plus_d_force = lambda world, context: forces.pairwise_world_lennard_jones_force(world, epsilon=plus_d_params['epsilon'], sigma=plus_d_params['sigma'])
             elif sim_force  == 'gravity':
-                plus_d_force = lambda world, context: forces.newtons_law_of_gravitation(world, plus_d_params['G'], context)
+                plus_d_force = lambda world, context: forces.newtons_law_of_gravitation(world=world, G=plus_d_params['G'], context=context)
             plus_d_world = sim.run_random_circle_sim(
                 plus_d_params,
                 base_params['seed'],
@@ -155,7 +155,7 @@ def run_one_monte_carlo_sample(base_params, true_params, initial_guess_params, h
             if sim_force == 'lj':
                 minus_d_force = lambda world, context: forces.pairwise_world_lennard_jones_force(world, epsilon=minus_d_params['epsilon'], sigma=minus_d_params['sigma'])
             elif sim_force  == 'gravity':
-                minus_d_force = lambda world, context: forces.newtons_law_of_gravitation(world, minus_d_params['G'], context)
+                minus_d_force = lambda world, context: forces.newtons_law_of_gravitation(world=world, G=minus_d_params['G'], context=context)
             minus_d_world = sim.run_random_circle_sim(
                 minus_d_params,
                 base_params['seed'],
@@ -229,7 +229,7 @@ if input("Enter any input to generate cost landscape >"):
             true_params_aug,
             base_params['seed'],
             forces=[
-                lambda world, context: forces.newtons_law_of_gravitation(world, true_params_aug['G'], context)
+                lambda world, context: forces.newtons_law_of_gravitation(world=world, G=true_params_aug['G'], context=context)
             ],
             indicators=[indicators.hamiltonian]
         )
@@ -240,7 +240,7 @@ if input("Enter any input to generate cost landscape >"):
                 params=test_params,
                 seed=base_params['seed'],
                 forces=[
-                    lambda world, context: forces.newtons_law_of_gravitation(world, combinations[combo], context)
+                    lambda world, context: forces.newtons_law_of_gravitation(world=world, G=combinations[combo], context=context)
                 ],
                 indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
                 indicator_schema=['Hamiltonian']
