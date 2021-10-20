@@ -44,7 +44,7 @@ from multi_agent_kinetics import serialize, worlds, forces, potentials, indicato
 
 ## TODO: pick specific case for diagram. Show how process works. Reduce time to understand paper.
 
-spatial_dims = 2 # choose dimensionality
+spatial_dims = 3 # choose dimensionality
 r_seed_guess = float(1)
 G_seed_guess = float(sys.argv[1])
 if len(sys.argv) > 2:

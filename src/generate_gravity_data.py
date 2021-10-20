@@ -6,12 +6,13 @@ import datetime as dt
 import math, random
 from multiprocessing import Pool
 from tqdm import tqdm
+import sys
 
 np.seterr(all="ignore")
 
 SIM_COUNT = 100
 
-spatial_dims = 2
+spatial_dims = int(sys.argv[1])
 n = 3
 path = f'../data/{spatial_dims}D/gravity'
 
@@ -38,7 +39,8 @@ def run_sim_and_write(seed):
             lambda world, context: forces.newtons_law_of_gravitation(world=world, G=true_params['G'], context=context)
         ],
         indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
-        indicator_schema=['Hamiltonian']
+        indicator_schema=['Hamiltonian'],
+        spatial_dims=spatial_dims
     )
     serialize.save_world(world, path, true_params_aug, seed)
 
