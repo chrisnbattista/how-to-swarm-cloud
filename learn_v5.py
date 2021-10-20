@@ -40,6 +40,10 @@ from multi_agent_kinetics import serialize, worlds, forces, potentials, indicato
 
 # note: if we wanted to do a partially-stochastic system, we would want to regress the noise parameters. maybe future note. assumption of gaussian distribution might help solve
 
+# TODO: Don't normalize to unknowns.
+
+## TODO: pick specific case for diagram. Show how process works. Reduce time to understand paper.
+
 r_seed_guess = float(1)
 G_seed_guess = float(sys.argv[1])
 if len(sys.argv) > 2:
@@ -86,9 +90,12 @@ class GravityNet(nn.Module):
         self.G = torch.nn.Parameter(torch.tensor(G_guess))
         self.r = torch.nn.Parameter(torch.tensor(r_guess))
         self.hyperparams = hyperparams
-        self.delta = 0.01 # TODO: decay this value over time
+        self.delta_G = 0.01 # TODO: decay this value over time
+        self.delta_r = 0.1
+        self.first_X = None
     
     def run_sim(self, X, steps, G, r):
+        '''utility func'''
         ##input(f'initial state: {X[:,:7]}')
         temp_world = worlds.World(
             initial_state=X[:,:7],
@@ -107,6 +114,7 @@ class GravityNet(nn.Module):
         return temp_world.get_full_history_with_indicators()
     
     def forward(self, X, steps):
+        if self.first_X is None: self.first_X = X
         self.last_X = X
         self.last_steps = steps
         return self.run_sim(X=X, steps=steps, G=self.G, r=self.r)
@@ -114,7 +122,7 @@ class GravityNet(nn.Module):
     def compute_loss(self, actual, predicted, return_components=False):
         '''Computes loss weighted according to hyperparameters.'''
         baseline = torch.tile(
-            actual[0,:], ## TODO: Change this to use *GLOBAL* IC instead of segment IC (information leak to the learning algorithm)
+            self.first_X[0,:], ## TODO: Change this to use *GLOBAL* IC instead of segment IC (information leak to the learning algorithm)
             (actual.shape[0], 1)
         ) # TODO: Normalize from common point so losses are directly comparable across samples
         baselined_actual = torch.div(actual, baseline)
@@ -137,9 +145,11 @@ class GravityNet(nn.Module):
 
     def compute_grad(self, actual, delta=None):
         if not delta is None:
-            d = delta
+            d_r = delta
+            d_G = delta
         else:
-            d = self.delta
+            d_r = self.delta_r
+            d_G = self.delta_G
 
         ## Prepare indexes
         pos = worlds.pos[2]
@@ -148,36 +158,42 @@ class GravityNet(nn.Module):
         ## Central Difference Theorem
 
         ## Compute loss for slightly perturbed G values
-        plus_G_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G+d, r=self.r)
+        plus_G_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G+d_G, r=self.r)
         plus_G_loss = self.compute_loss(actual, plus_G_history)
-        minus_G_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G-d, r=self.r)
+        minus_G_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G-d_G, r=self.r)
         minus_G_loss = self.compute_loss(actual, minus_G_history)
 
         ## Compute loss for slightly perturbed r values
-        plus_r_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G, r=self.r+d)
+        plus_r_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G, r=self.r+d_r)
         plus_r_loss = self.compute_loss(actual, plus_r_history)
-        minus_r_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G, r=self.r-d)
+        minus_r_history = self.run_sim(X=self.last_X, steps=self.last_steps, G=self.G, r=self.r-d_r)
         minus_r_loss = self.compute_loss(actual, minus_r_history)
 
         ## Calculate the gradient numerically based on the above values of G
         self.G.grad = Variable(
-            ((plus_G_loss - minus_G_loss).clone().detach() / (d*2)).type(torch.FloatTensor)
+            ((plus_G_loss - minus_G_loss).clone().detach() / (d_G*2)).type(torch.FloatTensor)
         )
         self.r.grad = Variable(
-            ((plus_r_loss - minus_r_loss).clone().detach() / (d*2)).type(torch.FloatTensor)
+            ((plus_r_loss - minus_r_loss).clone().detach() / (d_r*2)).type(torch.FloatTensor)
         )
 
 ## Define optimizer and model
 hyperparams = {
     'lr': 1e-2,
     'p':0.1,
-    'segment_count': 2000,  
-    'accuracy_threshold': 0.001,
+    'segment_count': 2000,   # try lengthening segment. figure out why it changes from quadratic to linear learning rate. show zoom in during paper.
+    'accuracy_threshold': 0.005,
     'p_err_weight': 1.0,
     'v_err_weight': 0.5,
     'h_err_weight': 0.1,
     'betas':(0.9, 0.999)
 }
+
+## TODO: investigate root causes of spikes.
+## Try choosing different segment
+## Investigate whether simulated dynamical system analytical ICs causing transient behavior -> spike in error, overcome by algorithm
+## Discoveries!
+
 model = GravityNet(G_guess=G_seed_guess, r_guess=r_seed_guess, hyperparams=hyperparams)
 if optimizer_choice == 'sgd':
     optimizer = torch.optim.SGD(
