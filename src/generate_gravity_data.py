@@ -12,22 +12,23 @@ np.seterr(all="ignore")
 
 SIM_COUNT = 100
 
-spatial_dims = int(sys.argv[1])
+if len(sys.argv) > 1: spatial_dims = int(sys.argv[1])
+else: spatial_dims = 3
 n = 3
-path = f'../data/{spatial_dims}D/gravity'
+path = f'../data/{spatial_dims}D/scaled-gravity'
 
 base_params = {
     'timestep': 0.1,
-    'size': 30, # rename to initialization_radius
+    'size': 1500, # rename to initialization_radius
     'n_agents': n,
-    'n_timesteps': 1000,
-    'min_dist': 12, # rename for clarity
-    'init_speed': 0,
-    'mass': 10**(9)
+    'n_timesteps': 100000,
+    'min_dist': 900, # rename for clarity
+    'init_speed': 1.991217133425166e-11,
+    'mass': 401.04339263553965
 }
 
 true_params = {
-    'G':(6.674*(10**(-11))),
+    'G':1
 }
 
 def run_sim_and_write(seed):

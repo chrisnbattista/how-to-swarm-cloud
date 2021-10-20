@@ -71,6 +71,8 @@ def percentage_error(actual, predicted):
             neginf=0.0
         )
     else:
+        ##input(actual.shape)
+        ##input(predicted.shape)
         return \
             torch.mean(
                 torch.linalg.norm(
@@ -86,7 +88,7 @@ def percentage_error(actual, predicted):
 
 ## Define model
 class GravityNet(nn.Module):
-    def __init__(self, G_guess, r_guess, hyperparams, spatial_dims=3):
+    def __init__(self, G_guess, r_guess, hyperparams, timestep, spatial_dims=3):
         super().__init__()
         self.G = torch.nn.Parameter(torch.tensor(G_guess))
         self.r = torch.nn.Parameter(torch.tensor(r_guess))
@@ -95,6 +97,7 @@ class GravityNet(nn.Module):
         self.delta_r = 0.1
         self.first_X = None
         self.spatial_dims = spatial_dims
+        self.timestep = timestep
     
     def run_sim(self, X, steps, G, r):
         '''utility func'''
@@ -105,11 +108,12 @@ class GravityNet(nn.Module):
             ],
             indicators=[
                 lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(world=w, G=G)]),
-                lambda w: potentials.gravitational_potential_energy(world=w, G=G)
+                ##lambda w: potentials.gravitational_potential_energy(world=w, G=G)
                 ],
-            indicator_schema=['Hamiltonian', 'GPE'],
+            indicator_schema=['Hamiltonian'],
             n_timesteps=steps,
-            timestep=0.02
+            timestep=self.timestep,
+            spatial_dims=self.spatial_dims
         )
         temp_world.advance_state(steps-1)
         return temp_world.get_full_history_with_indicators()
@@ -125,13 +129,17 @@ class GravityNet(nn.Module):
         baseline = torch.tile(
             self.first_X[0,:], ## TODO: Change this to use *GLOBAL* IC instead of segment IC (information leak to the learning algorithm)
             (actual.shape[0], 1)
-        ) # TODO: Normalize from common point so losses are directly comparable across samples
+        )
+        print(f'baseline: {baseline}\nactual: {actual}\npredicted: {predicted}')
         baselined_actual = torch.div(actual, baseline)
         baselined_predicted = torch.div(predicted, baseline)
-        p_err = self.hyperparams['p_err_weight'] * percentage_error(baselined_actual[pos], baselined_predicted[pos])
-        v_err = self.hyperparams['v_err_weight'] * percentage_error(baselined_actual[vel], baselined_predicted[vel])
-        h_err = self.hyperparams['h_err_weight'] * percentage_error(baselined_actual[ham], baselined_predicted[ham])
-        sum = p_err + v_err + h_err
+        p_err = self.hyperparams['p_err_weight'] * percentage_error(baselined_actual[:,pos], baselined_predicted[:,pos])
+        v_err = self.hyperparams['v_err_weight'] * percentage_error(baselined_actual[:,vel], baselined_predicted[:,vel])
+        h_err = self.hyperparams['h_err_weight'] * percentage_error(baselined_actual[:,ham], baselined_predicted[:,ham])
+        ##input(baselined_actual[:,ham])
+        ##input(baselined_predicted[:,ham])
+        print(f'p:{p_err}\nv:{v_err}\nh:{h_err}')
+        sum = p_err + v_err ##+ h_err
         if return_components:
             return (
                 sum,
@@ -191,31 +199,10 @@ hyperparams = {
 ## Investigate whether simulated dynamical system analytical ICs causing transient behavior -> spike in error, overcome by algorithm
 ## Discoveries!
 
-model = GravityNet(
-    G_guess=G_seed_guess,
-    r_guess=r_seed_guess,
-    hyperparams=hyperparams,
-    spatial_dims=spatial_dims
-)
-if optimizer_choice == 'sgd':
-    optimizer = torch.optim.SGD(
-        model.parameters(),
-        lr=hyperparams['lr'],
-        momentum=hyperparams['p'])
-elif optimizer_choice == 'adam':
-    optimizer = torch.optim.Adam(
-        (model.G, model.r),
-        lr=hyperparams['lr'],
-        betas=hyperparams['betas'],
-        amsgrad=True
-    )
-else:
-    raise Exception("Invalid choice of optimizer.")
-
 ## Define indexes (2D case)
-pos = worlds.pos[2]
-vel = worlds.vel[2]
-ham = slice(len(worlds.schemas['2d']), len(worlds.schemas['2d'])+1)
+pos = worlds.pos[spatial_dims]
+vel = worlds.vel[spatial_dims]
+ham = worlds.indicators[spatial_dims]
 
 ## Prepare to record training graphs
 losses_over_time = {
@@ -238,6 +225,28 @@ try:
     ## Load data
     world, params = serialize.load_world(fp)
     history = world.get_full_history_with_indicators()
+
+    model = GravityNet(
+        G_guess=G_seed_guess,
+        r_guess=r_seed_guess,
+        hyperparams=hyperparams,
+        spatial_dims=spatial_dims,
+        timestep=world.timestep_length
+    )
+    if optimizer_choice == 'sgd':
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=hyperparams['lr'],
+            momentum=hyperparams['p'])
+    elif optimizer_choice == 'adam':
+        optimizer = torch.optim.Adam(
+            (model.G, model.r),
+            lr=hyperparams['lr'],
+            betas=hyperparams['betas'],
+            amsgrad=True
+        )
+    else:
+        raise Exception("Invalid choice of optimizer.")
 
     ## Break the trajectory into distinct segments
     steps = int(history.shape[0] / world.n_agents / hyperparams['segment_count'])
