@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from multi_agent_kinetics import serialize, worlds, forces, potentials, indicators
+from multi_agent_kinetics import serialize, worlds, forces, potentials, indicators, viz
 
 # TODO: fix paper
 # maggioni paper or more generic in methodology
@@ -50,7 +50,7 @@ G_seed_guess = float(sys.argv[1])
 if len(sys.argv) > 2:
     optimizer_choice = sys.argv[2]
 else:
-    optimizer_choice = 'sgd'
+    optimizer_choice = 'adam'
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -99,7 +99,7 @@ class GravityNet(nn.Module):
         self.spatial_dims = spatial_dims
         self.timestep = timestep
     
-    def run_sim(self, X, steps, G, r):
+    def run_sim(self, X, steps, G, r, return_world=False):
         '''utility func'''
         temp_world = worlds.World(
             initial_state=X[:,worlds.full_state[self.spatial_dims]],
@@ -116,7 +116,8 @@ class GravityNet(nn.Module):
             spatial_dims=self.spatial_dims
         )
         temp_world.advance_state(steps-1)
-        return temp_world.get_full_history_with_indicators()
+        if return_world: return temp_world
+        else: return temp_world.get_full_history_with_indicators()
     
     def forward(self, X, steps):
         if self.first_X is None: self.first_X = X
@@ -127,10 +128,10 @@ class GravityNet(nn.Module):
     def compute_loss(self, actual, predicted, return_components=False):
         '''Computes loss weighted according to hyperparameters.'''
         baseline = torch.tile(
-            self.first_X[0,:], ## TODO: Change this to use *GLOBAL* IC instead of segment IC (information leak to the learning algorithm)
+            self.first_X[0,:],
             (actual.shape[0], 1)
         )
-        print(f'baseline: {baseline}\nactual: {actual}\npredicted: {predicted}')
+        ##print(f'baseline: {baseline}\nactual: {actual}\npredicted: {predicted}')
         baselined_actual = torch.div(actual, baseline)
         baselined_predicted = torch.div(predicted, baseline)
         p_err = self.hyperparams['p_err_weight'] * percentage_error(baselined_actual[:,pos], baselined_predicted[:,pos])
@@ -138,8 +139,8 @@ class GravityNet(nn.Module):
         h_err = self.hyperparams['h_err_weight'] * percentage_error(baselined_actual[:,ham], baselined_predicted[:,ham])
         ##input(baselined_actual[:,ham])
         ##input(baselined_predicted[:,ham])
-        print(f'p:{p_err}\nv:{v_err}\nh:{h_err}')
-        sum = p_err + v_err ##+ h_err
+        ##print(f'p:{p_err}\nv:{v_err}\nh:{h_err}')
+        sum = p_err + v_err + h_err
         if return_components:
             return (
                 sum,
@@ -186,8 +187,8 @@ class GravityNet(nn.Module):
 hyperparams = {
     'lr': 1e-2,
     'p':0.1,
-    'segment_count': 2000,   # try lengthening segment. figure out why it changes from quadratic to linear learning rate. show zoom in during paper.
-    'accuracy_threshold': 0.005,
+    'segment_length': 20,   # try lengthening segment. figure out why it changes from quadratic to linear learning rate. show zoom in during paper.
+    'accuracy_threshold': 0.00005,
     'p_err_weight': 1.0,
     'v_err_weight': 0.5,
     'h_err_weight': 0.1,
@@ -240,16 +241,13 @@ try:
             momentum=hyperparams['p'])
     elif optimizer_choice == 'adam':
         optimizer = torch.optim.Adam(
-            (model.G, model.r),
+            model.parameters(),
             lr=hyperparams['lr'],
             betas=hyperparams['betas'],
             amsgrad=True
         )
     else:
         raise Exception("Invalid choice of optimizer.")
-
-    ## Break the trajectory into distinct segments
-    steps = int(history.shape[0] / world.n_agents / hyperparams['segment_count'])
 
     ## Try the training data multiple times if necessary
     halt = False
@@ -263,15 +261,15 @@ try:
         # TODO: Increase window size to learn r more effectively
 
         ## Loop through all the segments of the trajectory
-        for segment_i in range(hyperparams['segment_count']):
-            segment_history = history[int(steps*segment_i*world.n_agents):int(steps*(segment_i+1)*world.n_agents),:]
+        for segment_i in range(int(world.n_timesteps / hyperparams['segment_length'])):
+            segment_history = history[int(hyperparams['segment_length']*segment_i*world.n_agents):int(hyperparams['segment_length']*(segment_i+1)*world.n_agents),:]
 
             ## Define input and expected output
             X = segment_history[0:world.n_agents,:]
             y = segment_history
 
             ## Run sim
-            y_pred = model(X, steps)
+            y_pred = model(X, hyperparams['segment_length'])
 
             ## Compute gradients
             model.zero_grad()
@@ -303,5 +301,27 @@ except KeyboardInterrupt as e:
     pass
 
 finally:
-    print("Logging run...")
-    pandas.DataFrame(losses_over_time).to_csv('../data/results/losses'+str(datetime.datetime.now())+"_segment_train.csv")
+    if True:
+        print("Logging run...")
+        pandas.DataFrame(losses_over_time).to_csv('../data/results/losses'+str(datetime.datetime.now())+"_segment_train.csv")
+        print("Running first 25% of simulation based on learned parameters...")
+        reconstructed_world = model.run_sim(
+            X=world.get_history()[0:int(world.n_agents),:],
+            steps=int(world.n_timesteps/4),
+            G=model.G,
+            r=model.r,
+            return_world=True
+        )
+        if reconstructed_world.spatial_dims == 2:
+            fig, ax = viz.set_up_figure()
+            fig2, ax2 = viz.set_up_figure()
+        elif reconstructed_world.spatial_dims == 3:
+            fig, ax = viz.set_up_figure_3d()
+            fig2, ax2 = viz.set_up_figure_3d()
+
+        print("Plotting simulation versus ground truth...")
+        viz.trace_trajectories(world, fig, ax, 'Ground Truth World History', fraction=0.25)
+        fig.text(0.1, 0.1, "Timesteps: " + str(world.n_timesteps/2), fontsize=9)
+        viz.trace_trajectories(reconstructed_world, fig2, ax2, 'Reconstructed World History')
+        fig2.text(0.1, 0.1, "Timesteps: " + str(reconstructed_world.n_timesteps), fontsize=9)
+        plt.show(block=True)

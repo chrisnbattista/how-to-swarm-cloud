@@ -23,7 +23,7 @@ base_params = {
     'n_agents': n,
     'n_timesteps': 100000,
     'min_dist': 900, # rename for clarity
-    'init_speed': 1.991217133425166e-11,
+    'init_speed': 0,
     'mass': 401.04339263553965
 }
 
