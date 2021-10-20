@@ -1,3 +1,6 @@
 [submodule "multi_agent_kinetics"]
 	path = multi_agent_kinetics
 	url = https://github.com/chrisnbattista/multi-agent-kinetics.git
+[submodule "src/multi_agent_kinetics"]
+	path = src/multi_agent_kinetics
+	url = https://github.com/chrisnbattista/multi-agent-kinetics.git

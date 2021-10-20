@@ -21,10 +21,12 @@ else:
     optimizer = None
 
 print(f'Spawning {sample_count} training processes...')
+sub_procs = []
 for G_guess in sampled_parameter_space:
     if optimizer != None:
-        subprocess.Popen(["python", "learn_v5.py", str(G_guess), str(optimizer)])
+        sub_procs.append(subprocess.Popen(["python", "learn_v5.py", str(G_guess), str(optimizer)]))
     else:
-        subprocess.Popen(["python", "learn_v5.py", str(G_guess)])
+        sub_procs.append(subprocess.Popen(["python", "learn_v5.py", str(G_guess)]))
 
 print("Spawned.")
+[p.wait() for p in sub_procs]

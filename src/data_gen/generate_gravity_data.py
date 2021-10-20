@@ -11,8 +11,9 @@ np.seterr(all="ignore")
 
 SIM_COUNT = 100
 
+spatial_dims = 2
 n = 3
-path = '/two_particle/gravity'
+path = f'../data/{spatial_dims}D/gravity'
 
 base_params = {
     'timestep': 0.1,
@@ -39,7 +40,7 @@ def run_sim_and_write(seed):
         indicators=[lambda w: indicators.hamiltonian(w, global_potentials=[lambda w: potentials.gravitational_potential_energy(w, G=true_params['G'])])],
         indicator_schema=['Hamiltonian']
     )
-    serialize.save_world(world, './data'+path, true_params_aug, seed)
+    serialize.save_world(world, path, true_params_aug, seed)
 
 if __name__ == '__main__':
     for i in tqdm(range(SIM_COUNT)):

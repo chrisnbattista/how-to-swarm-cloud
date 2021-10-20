@@ -44,6 +44,7 @@ from multi_agent_kinetics import serialize, worlds, forces, potentials, indicato
 
 ## TODO: pick specific case for diagram. Show how process works. Reduce time to understand paper.
 
+spatial_dims = 2 # choose dimensionality
 r_seed_guess = float(1)
 G_seed_guess = float(sys.argv[1])
 if len(sys.argv) > 2:
@@ -54,7 +55,7 @@ else:
 torch.autograd.set_detect_anomaly(True)
 
 ## Split data
-filepaths = serialize.list_worlds("./data/two_particle/scaled-gravity")
+filepaths = serialize.list_worlds(f"../data/{spatial_dims}D/scaled-gravity")
 print(f'Number of training files: {len(filepaths)}')
 train_filepaths, test_filepaths = train_test_split(filepaths, test_size=0.2)
 
@@ -85,7 +86,7 @@ def percentage_error(actual, predicted):
 
 ## Define model
 class GravityNet(nn.Module):
-    def __init__(self, G_guess, r_guess, hyperparams):
+    def __init__(self, G_guess, r_guess, hyperparams, spatial_dims=3):
         super().__init__()
         self.G = torch.nn.Parameter(torch.tensor(G_guess))
         self.r = torch.nn.Parameter(torch.tensor(r_guess))
@@ -93,12 +94,12 @@ class GravityNet(nn.Module):
         self.delta_G = 0.01 # TODO: decay this value over time
         self.delta_r = 0.1
         self.first_X = None
+        self.spatial_dims = spatial_dims
     
     def run_sim(self, X, steps, G, r):
         '''utility func'''
-        ##input(f'initial state: {X[:,:7]}')
         temp_world = worlds.World(
-            initial_state=X[:,:7],
+            initial_state=X[:,worlds.full_state[self.spatial_dims]],
             forces=[
                 lambda world, context: forces.newtons_law_of_gravitation(world=world, G=G, r=r.detach().clone(), context=context)
             ],
@@ -151,10 +152,6 @@ class GravityNet(nn.Module):
             d_r = self.delta_r
             d_G = self.delta_G
 
-        ## Prepare indexes
-        pos = worlds.pos[2]
-        ham = slice(len(worlds.schemas['2d']), len(worlds.schemas['2d'])+1)
-
         ## Central Difference Theorem
 
         ## Compute loss for slightly perturbed G values
@@ -194,7 +191,12 @@ hyperparams = {
 ## Investigate whether simulated dynamical system analytical ICs causing transient behavior -> spike in error, overcome by algorithm
 ## Discoveries!
 
-model = GravityNet(G_guess=G_seed_guess, r_guess=r_seed_guess, hyperparams=hyperparams)
+model = GravityNet(
+    G_guess=G_seed_guess,
+    r_guess=r_seed_guess,
+    hyperparams=hyperparams,
+    spatial_dims=spatial_dims
+)
 if optimizer_choice == 'sgd':
     optimizer = torch.optim.SGD(
         model.parameters(),
@@ -293,4 +295,4 @@ except KeyboardInterrupt as e:
 
 finally:
     print("Logging run...")
-    pandas.DataFrame(losses_over_time).to_csv('./data/results/losses'+str(datetime.datetime.now())+"_segment_train.csv")
+    pandas.DataFrame(losses_over_time).to_csv('../data/results/losses'+str(datetime.datetime.now())+"_segment_train.csv")
