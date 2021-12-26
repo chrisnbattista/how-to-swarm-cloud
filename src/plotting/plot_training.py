@@ -2,24 +2,30 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 
+
 def plot_training_graph(data_df):
     df = data_df.loc[:, ~data_df.columns.str.contains('^Unnamed')]
-    df.rename(
-        columns={
-            'pos': 'Position Reconstruction Error',
-            'vel': 'Velocity Reconstruction Error',
-            'ham': 'Hamiltonian Reconstruction Error',
-            'g': 'Learned G Value',
-            'r': 'Learned r Value',
-        },
-        inplace=True)
-    fig = plt.figure()
-    ax = fig.gca()
-    df.plot(ax=ax)
-    ax.xaxis.get_major_locator().set_params(integer=True)
-    plt.ylabel("Loss / Parameter Value")
-    plt.xlabel("Number of Training Examples Seen")
+    df.rename(columns={
+        'pos': 'Position Reconstruction Error',
+        'vel': 'Velocity Reconstruction Error',
+        'ham': 'Hamiltonian Reconstruction Error',
+        'g': 'Learned G Value',
+        'r': 'Learned r Value',
+    },
+              inplace=True)
+    fig, axs = plt.subplots(2)
+    fig.suptitle('Parameter Values and Training Loss versus Samples Seen')
+    axs[0].xaxis.get_major_locator().set_params(integer=True)
+    axs[0].plot(df.index, df['Position Reconstruction Error'])
+    axs[0].plot(df.index, df['Velocity Reconstruction Error'])
+    axs[1].plot(df.index, df['Learned G Value'])
+    axs[1].plot(df.index, df['Learned r Value'])
+    axs[0].set(ylabel="Loss Component",
+               xlabel="Number of Training Examples Seen")
+    axs[1].set(ylabel="Parameter Value",
+               xlabel="Number of Training Examples Seen")
     plt.show()
+
 
 if __name__ == '__main__':
     df = pd.read_csv(sys.argv[1])

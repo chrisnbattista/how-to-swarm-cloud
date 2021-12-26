@@ -21,10 +21,10 @@ base_params = {
     'timestep': 0.1,
     'size': 1500, # rename to initialization_radius
     'n_agents': n,
-    'n_timesteps': 100000,
+    'n_timesteps': 10000 * 5,
     'min_dist': 900, # rename for clarity
-    'init_speed': 0,
-    'mass': 401.04339263553965
+    'init_speed': 0.6283185307179586,
+    'mass': 401.04339263553965 / 2
 }
 
 true_params = {
